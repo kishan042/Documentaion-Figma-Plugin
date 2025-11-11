@@ -1,0 +1,324 @@
+<!DOCTYPE html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <title>Hello World</title>
+    <style>
+      :root {
+        color-scheme: dark;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        font-family: "Inter", system-ui, sans-serif;
+        background: radial-gradient(circle at top, #1e293b 0%, #020617 55%, #010314 100%);
+        color: #e2e8f0;
+      }
+
+      body {
+        display: flex;
+        justify-content: center;
+        align-items: center;
+        padding: 32px 28px;
+      }
+
+      .app {
+        width: 100%;
+        height: 100%;
+        display: flex;
+        flex-direction: column;
+        gap: 24px;
+        color: #e2e8f0;
+      }
+
+      .tabs {
+        display: inline-flex;
+        gap: 8px;
+        background: rgba(15, 23, 42, 0.55);
+        border-radius: 999px;
+        padding: 4px;
+        width: fit-content;
+      }
+
+      .tab {
+        flex: 1;
+        border: 0;
+        background: transparent;
+        color: #94a3b8;
+        font-size: 13px;
+        font-weight: 600;
+        padding: 10px 14px;
+        border-radius: 999px;
+        cursor: pointer;
+        transition: background 0.2s, color 0.2s;
+      }
+
+      .tab.active {
+        background: #1d4ed8;
+        color: #f8fafc;
+        box-shadow: 0 8px 28px rgba(29, 78, 216, 0.35);
+      }
+
+      .tab:not(.active):hover {
+        color: #f8fafc;
+        background: rgba(148, 163, 184, 0.12);
+      }
+
+      .panel {
+        flex: 1;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px solid rgba(148, 163, 184, 0.12);
+        border-radius: 20px;
+        padding: 24px;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+      }
+
+      .panel[data-mode="documentation"] {
+        border: 2px dotted rgba(148, 163, 184, 0.35);
+        background: rgba(15, 23, 42, 0.4);
+      }
+
+      .view {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+      }
+
+      .view[data-state="hidden"] {
+        display: none;
+      }
+
+      .doc-message {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        justify-content: center;
+        text-align: center;
+        gap: 12px;
+        padding: 32px;
+        color: #cbd5f5;
+        font-size: 13px;
+        letter-spacing: 0.01em;
+        border-radius: 16px;
+      }
+
+      .doc-message strong {
+        font-size: 14px;
+        color: #f1f5f9;
+      }
+
+      .doc-frame {
+        flex: 1;
+        width: 100%;
+        border: 0;
+        border-radius: 16px;
+        background: rgba(2, 6, 23, 0.55);
+      }
+
+      .grid {
+        display: grid;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
+        gap: 16px;
+      }
+
+      .card {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        padding: 16px;
+        background: rgba(11, 22, 46, 0.9);
+        border-radius: 18px;
+        border: 1px solid rgba(59, 130, 246, 0.12);
+        box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08);
+      }
+
+      .card h3 {
+        margin: 0;
+        font-size: 14px;
+        font-weight: 600;
+        color: #f1f5f9;
+      }
+
+      .card p {
+        margin: 0;
+        font-size: 12px;
+        line-height: 1.4;
+        color: #cbd5f5;
+      }
+
+      .card button {
+        margin-top: auto;
+        border: 0;
+        border-radius: 10px;
+        padding: 8px 0;
+        font-size: 12px;
+        font-weight: 600;
+        color: #0b1220;
+        background: #38bdf8;
+        cursor: pointer;
+        transition: background 0.2s, transform 0.2s;
+      }
+
+      .card button:hover {
+        background: #0ea5e9;
+        transform: translateY(-1px);
+      }
+
+      .rescan {
+        margin-top: auto;
+        border: 0;
+        border-radius: 16px;
+        padding: 16px;
+        font-size: 14px;
+        font-weight: 600;
+        letter-spacing: 0.01em;
+        color: #0b1220;
+        background: linear-gradient(135deg, #38bdf8 0%, #60a5fa 100%);
+        cursor: pointer;
+        transition: transform 0.2s, box-shadow 0.2s;
+        min-height: 48px;
+      }
+
+      .rescan:hover {
+        transform: translateY(-1px);
+        box-shadow: 0 10px 24px rgba(96, 165, 250, 0.35);
+      }
+
+      .rescan:active {
+        transform: translateY(0);
+        box-shadow: inset 0 0 0 2px rgba(15, 23, 42, 0.45);
+        background: linear-gradient(135deg, #0ea5e9 0%, #2563eb 100%);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="app">
+      <nav class="tabs" role="tablist">
+        <button class="tab active" type="button" role="tab" aria-selected="true" data-target="overview">Overview</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-target="documentation">Documentation</button>
+      </nav>
+      <section class="panel" data-mode="overview">
+        <div class="view" data-panel="overview">
+          <div class="grid">
+            <article class="card">
+              <h3>Components</h3>
+              <p>32 connected components detected in this file.</p>
+              <button type="button">View details</button>
+            </article>
+            <article class="card">
+              <h3>Instances</h3>
+              <p>127 unique instances currently in sync.</p>
+              <button type="button">Review instances</button>
+            </article>
+            <article class="card">
+              <h3>Detachments</h3>
+              <p>5 potential detachments require attention.</p>
+              <button type="button">See matches</button>
+            </article>
+            <article class="card">
+              <h3>Updates</h3>
+              <p>8 components have newer versions available.</p>
+              <button type="button">Apply updates</button>
+            </article>
+          </div>
+        </div>
+        <div class="view" data-panel="documentation" data-state="hidden">
+          <div class="doc-message">
+            <strong data-doc-primary>Select a component or instance to display the correct documentation.</strong>
+            <span data-doc-secondary>The documentation link will load inside this panel once a component with attached docs is selected.</span>
+          </div>
+          <iframe class="doc-frame" title="Component documentation" hidden sandbox="allow-same-origin allow-scripts"></iframe>
+        </div>
+        <button class="rescan" type="button">Rescan</button>
+      </section>
+    </div>
+    <script>
+      const tabs = Array.from(document.querySelectorAll(".tab"));
+      const views = Array.from(document.querySelectorAll(".view[data-panel]"));
+      const docMessage = document.querySelector(".doc-message");
+      const docPrimary = document.querySelector("[data-doc-primary]");
+      const docSecondary = document.querySelector("[data-doc-secondary]");
+      const docFrame = document.querySelector(".doc-frame");
+      const panel = document.querySelector(".panel");
+      const rescanButton = document.querySelector(".rescan");
+      const defaultPrimary = docPrimary.textContent;
+      const defaultSecondary = docSecondary.textContent;
+
+      function setActiveTab(targetId) {
+        tabs.forEach((tab) => {
+          const isActive = tab.dataset.target === targetId;
+          tab.classList.toggle("active", isActive);
+          tab.setAttribute("aria-selected", String(isActive));
+        });
+
+        views.forEach((view) => {
+          const isActive = view.dataset.panel === targetId;
+          view.dataset.state = isActive ? "active" : "hidden";
+        });
+
+        panel.dataset.mode = targetId;
+        rescanButton.hidden = targetId === "documentation";
+      }
+
+      tabs.forEach((tab) => {
+        tab.addEventListener("click", () => {
+          setActiveTab(tab.dataset.target);
+        });
+      });
+
+      rescanButton.addEventListener("click", () => {
+        parent.postMessage(
+          { pluginMessage: { type: "request-documentation" } },
+          "*"
+        );
+      });
+
+      window.addEventListener("message", (event) => {
+        if (event.data?.type === "documentation-link") {
+          if (event.data.url) {
+            docMessage.hidden = true;
+            docFrame.hidden = false;
+            if (docFrame.src !== event.data.url) {
+              docFrame.src = event.data.url;
+            }
+          } else {
+            docFrame.hidden = true;
+            docMessage.hidden = false;
+            docFrame.removeAttribute("src");
+
+            switch (event.data.reason) {
+              case "missing":
+                docPrimary.textContent = "Documentation unavailable.";
+                docSecondary.textContent =
+                  "This component or instance does not have an attached documentation link.";
+                break;
+              case "unsupported":
+                docPrimary.textContent = "Unsupported selection.";
+                docSecondary.textContent =
+                  "Select a design system component or instance to preview documentation.";
+                break;
+              case "no-selection":
+                docPrimary.textContent = defaultPrimary;
+                docSecondary.textContent = defaultSecondary;
+                break;
+              default:
+                docPrimary.textContent = "Unable to load documentation.";
+                docSecondary.textContent =
+                  "Try selecting a different component or run a rescan.";
+            }
+          }
+        }
+      });
+    </script>
+  </body>
+</html>
+
