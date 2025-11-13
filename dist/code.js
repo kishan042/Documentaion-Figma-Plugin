@@ -320,7 +320,12 @@ function extractMetadata(node, mainComponent) {
     description: "",
     tokens: [],
     styles: [],
-    links: []
+    links: [],
+    // Organized variable categories
+    colorVariables: [],
+    typographyVariables: [],
+    spacingVariables: [],
+    cornerRadiusVariables: []
   };
 
   // Extract description from node or main component
@@ -576,6 +581,13 @@ function extractMetadata(node, mainComponent) {
               displayName = "Stroke Weight";
             } else if (parts[0] === "opacity") {
               displayName = "Opacity";
+            } else if (parts[0] === "cornerRadius" || parts[0] === "topLeftRadius" || 
+                       parts[0] === "topRightRadius" || parts[0] === "bottomLeftRadius" || 
+                       parts[0] === "bottomRightRadius") {
+              displayName = "Corner Radius";
+            } else if (parts[0] === "paddingLeft" || parts[0] === "paddingRight" || 
+                       parts[0] === "paddingTop" || parts[0] === "paddingBottom") {
+              displayName = parts[0].replace("padding", "Padding ");
             }
           } else {
             // Simple property names
@@ -587,6 +599,18 @@ function extractMetadata(node, mainComponent) {
               displayName = "Stroke Weight";
             } else if (propertyName === "opacity") {
               displayName = "Opacity";
+            } else if (propertyName === "cornerRadius" || propertyName === "topLeftRadius" || 
+                       propertyName === "topRightRadius" || propertyName === "bottomLeftRadius" || 
+                       propertyName === "bottomRightRadius") {
+              displayName = "Corner Radius";
+            } else if (propertyName === "paddingLeft") {
+              displayName = "Padding Left";
+            } else if (propertyName === "paddingRight") {
+              displayName = "Padding Right";
+            } else if (propertyName === "paddingTop") {
+              displayName = "Padding Top";
+            } else if (propertyName === "paddingBottom") {
+              displayName = "Padding Bottom";
             }
           }
           
@@ -621,39 +645,88 @@ function extractMetadata(node, mainComponent) {
             }
             
             if (variable) {
-              console.log("[extractMetadata] Resolved variable:", variable.name, variable.key);
+              console.log("[extractMetadata] Resolved variable:", variable.name, variable.key, "Type:", variable.resolvedType);
               
-              // Get the actual color value and convert to hex
-              var colorValue = "";
+              // Get the actual value based on type
+              var variableValue = "";
+              var variableCategory = "other";
+              
               try {
-                if (variable.resolvedType === "COLOR") {
-                  var valuesByMode = variable.valuesByMode;
-                  var modeKeys = Object.keys(valuesByMode);
-                  if (modeKeys.length > 0) {
-                    var colorObj = valuesByMode[modeKeys[0]];
-                    if (colorObj && typeof colorObj === "object" && "r" in colorObj) {
-                      var r = Math.round(colorObj.r * 255);
-                      var g = Math.round(colorObj.g * 255);
-                      var b = Math.round(colorObj.b * 255);
-                      colorValue = "#" + 
+                var valuesByMode = variable.valuesByMode;
+                var modeKeys = Object.keys(valuesByMode);
+                
+                if (modeKeys.length > 0) {
+                  var value = valuesByMode[modeKeys[0]];
+                  
+                  if (variable.resolvedType === "COLOR") {
+                    variableCategory = "color";
+                    if (value && typeof value === "object" && "r" in value) {
+                      var r = Math.round(value.r * 255);
+                      var g = Math.round(value.g * 255);
+                      var b = Math.round(value.b * 255);
+                      variableValue = "#" + 
                         ("0" + r.toString(16)).slice(-2) + 
                         ("0" + g.toString(16)).slice(-2) + 
                         ("0" + b.toString(16)).slice(-2);
-                      colorValue = colorValue.toUpperCase();
+                      variableValue = variableValue.toUpperCase();
+                    }
+                  } else if (variable.resolvedType === "FLOAT") {
+                    // Could be spacing, corner radius, or other numeric value
+                    if (typeof value === "number") {
+                      variableValue = value + "px";
+                      
+                      // Determine category based on property name
+                      var lowerProp = propertyName.toLowerCase();
+                      var lowerDisplay = displayName.toLowerCase();
+                      var lowerVarName = variable.name.toLowerCase();
+                      
+                      if (lowerProp.indexOf("padding") > -1 || lowerProp.indexOf("margin") > -1 || 
+                          lowerDisplay.indexOf("padding") > -1 || lowerDisplay.indexOf("spacing") > -1 ||
+                          lowerVarName.indexOf("spacing") > -1 || lowerVarName.indexOf("padding") > -1) {
+                        variableCategory = "spacing";
+                      } else if (lowerProp.indexOf("radius") > -1 || lowerDisplay.indexOf("radius") > -1 ||
+                                 lowerVarName.indexOf("radius") > -1) {
+                        variableCategory = "cornerRadius";
+                      } else if (lowerProp.indexOf("size") > -1 || lowerProp.indexOf("font") > -1 ||
+                                 lowerDisplay.indexOf("font") > -1 || lowerDisplay.indexOf("text") > -1) {
+                        variableCategory = "typography";
+                      }
+                    }
+                  } else if (variable.resolvedType === "STRING") {
+                    variableValue = value;
+                    if (propertyName.indexOf("font") > -1 || displayName.indexOf("Font") > -1) {
+                      variableCategory = "typography";
                     }
                   }
                 }
-              } catch (colorError) {
-                console.log("[extractMetadata] Error getting color value:", colorError);
+              } catch (valueError) {
+                console.log("[extractMetadata] Error getting variable value:", valueError);
               }
               
-              // Create token string with color value instead of key
+              // Create variable object
+              var varObj = {
+                property: displayName,
+                name: variable.name,
+                value: variableValue
+              };
+              
+              // Add to appropriate category
+              if (variableCategory === "color") {
+                metadata.colorVariables.push(varObj);
+              } else if (variableCategory === "typography") {
+                metadata.typographyVariables.push(varObj);
+              } else if (variableCategory === "spacing") {
+                metadata.spacingVariables.push(varObj);
+              } else if (variableCategory === "cornerRadius") {
+                metadata.cornerRadiusVariables.push(varObj);
+              }
+              
+              // Also keep in tokens for backward compatibility
               var tokenString = displayName + " Variable: " + variable.name;
-              if (colorValue) {
-                tokenString += " (" + colorValue + ")";
+              if (variableValue) {
+                tokenString += " (" + variableValue + ")";
               }
               
-              // Check for duplicates before adding
               if (tokens.indexOf(tokenString) === -1) {
                 tokens.push(tokenString);
               }
@@ -746,6 +819,24 @@ function extractMetadata(node, mainComponent) {
                               // Check for duplicates before adding
                               if (tokens.indexOf(tokenString) === -1) {
                                 tokens.push(tokenString);
+                              }
+                              
+                              // Also add to colorVariables
+                              var varObj = {
+                                property: "Fill",
+                                name: variable.name,
+                                value: hexColor
+                              };
+                              // Check for duplicate in colorVariables
+                              var isDupe = false;
+                              for (var cv = 0; cv < metadata.colorVariables.length; cv += 1) {
+                                if (metadata.colorVariables[cv].name === variable.name) {
+                                  isDupe = true;
+                                  break;
+                                }
+                              }
+                              if (!isDupe) {
+                                metadata.colorVariables.push(varObj);
                               }
                             }
                           }

@@ -125,7 +125,8 @@
       }
 
       .doc-metadata {
-        flex: 1;
+        flex: 0 0 auto;
+        max-height: 300px;
         display: flex;
         flex-direction: column;
         overflow-y: auto;
@@ -170,6 +171,24 @@
         font-size: 12px;
         text-transform: uppercase;
         letter-spacing: 0.05em;
+      }
+
+      .metadata-section {
+        background: rgba(15, 23, 42, 0.5);
+        border-radius: 12px;
+        padding: 16px;
+        margin: 8px 0;
+      }
+
+      .metadata-section-title {
+        font-weight: 700;
+        color: #f1f5f9;
+        margin-bottom: 12px;
+        font-size: 13px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        padding-bottom: 8px;
+        border-bottom: 2px solid rgba(59, 130, 246, 0.3);
       }
 
       .metadata-value {
@@ -577,15 +596,91 @@
         
         addItem("Type", formattedType);
         
-        // Check if variables are being used
-        var hasVariables = metadata.tokens && metadata.tokens.length > 0;
+        // Render variables in organized sections: Color, Typography, Spacing, Corner Radius
+        var hasAnyVariables = false;
         
-        if (hasVariables) {
-          addVariables("Figma Variables", metadata.tokens);
+        // 1. Color Variables
+        if (metadata.colorVariables && metadata.colorVariables.length > 0) {
+          hasAnyVariables = true;
+          html += '<div class="metadata-item metadata-section">';
+          html += '<div class="metadata-section-title">Color</div>';
+          for (var i = 0; i < metadata.colorVariables.length; i += 1) {
+            var colorVar = metadata.colorVariables[i];
+            html += '<div class="variable-row">';
+            html += '<div class="variable-property">' + escapeHtml(colorVar.property) + '</div>';
+            html += '<div class="variable-detail">';
+            html += '<div class="variable-name">' + escapeHtml(colorVar.name) + '</div>';
+            if (colorVar.value) {
+              html += '<div class="variable-value">' + escapeHtml(colorVar.value) + '</div>';
+            }
+            html += '</div>';
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+        
+        // 2. Typography Variables
+        if (metadata.typographyVariables && metadata.typographyVariables.length > 0) {
+          hasAnyVariables = true;
+          html += '<div class="metadata-item metadata-section">';
+          html += '<div class="metadata-section-title">Typography</div>';
+          for (var i = 0; i < metadata.typographyVariables.length; i += 1) {
+            var typoVar = metadata.typographyVariables[i];
+            html += '<div class="variable-row">';
+            html += '<div class="variable-property">' + escapeHtml(typoVar.property) + '</div>';
+            html += '<div class="variable-detail">';
+            html += '<div class="variable-name">' + escapeHtml(typoVar.name) + '</div>';
+            if (typoVar.value) {
+              html += '<div class="variable-value">' + escapeHtml(typoVar.value) + '</div>';
+            }
+            html += '</div>';
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+        
+        // 3. Spacing Variables
+        if (metadata.spacingVariables && metadata.spacingVariables.length > 0) {
+          hasAnyVariables = true;
+          html += '<div class="metadata-item metadata-section">';
+          html += '<div class="metadata-section-title">Spacing</div>';
+          for (var i = 0; i < metadata.spacingVariables.length; i += 1) {
+            var spacingVar = metadata.spacingVariables[i];
+            html += '<div class="variable-row">';
+            html += '<div class="variable-property">' + escapeHtml(spacingVar.property) + '</div>';
+            html += '<div class="variable-detail">';
+            html += '<div class="variable-name">' + escapeHtml(spacingVar.name) + '</div>';
+            if (spacingVar.value) {
+              html += '<div class="variable-value">' + escapeHtml(spacingVar.value) + '</div>';
+            }
+            html += '</div>';
+            html += '</div>';
+          }
+          html += '</div>';
+        }
+        
+        // 4. Corner Radius Variables
+        if (metadata.cornerRadiusVariables && metadata.cornerRadiusVariables.length > 0) {
+          hasAnyVariables = true;
+          html += '<div class="metadata-item metadata-section">';
+          html += '<div class="metadata-section-title">Corner Radius</div>';
+          for (var i = 0; i < metadata.cornerRadiusVariables.length; i += 1) {
+            var radiusVar = metadata.cornerRadiusVariables[i];
+            html += '<div class="variable-row">';
+            html += '<div class="variable-property">' + escapeHtml(radiusVar.property) + '</div>';
+            html += '<div class="variable-detail">';
+            html += '<div class="variable-name">' + escapeHtml(radiusVar.name) + '</div>';
+            if (radiusVar.value) {
+              html += '<div class="variable-value">' + escapeHtml(radiusVar.value) + '</div>';
+            }
+            html += '</div>';
+            html += '</div>';
+          }
+          html += '</div>';
         }
         
         // Only show styles if no variables are being used
-        if (!hasVariables && metadata.styles && metadata.styles.length > 0) {
+        if (!hasAnyVariables && metadata.styles && metadata.styles.length > 0) {
           addItem("Styles", metadata.styles);
         }
         // Add documentation links with enhanced styling
@@ -714,15 +809,47 @@
             }
           } else {
             console.log("[window.onmessage] No URL, reason:", data.reason);
-            currentFrame.hidden = true;
-            currentFrame.removeAttribute("src");
-
-            if (hasMetadata) {
-              console.log("[window.onmessage] Showing metadata without URL");
-              // Always hide placeholder and render metadata
+            
+            // Check if metadata has documentation links to display in iframe
+            var hasLinks = hasMetadata && data.metadata.links && data.metadata.links.length > 0;
+            var firstLink = null;
+            
+            if (hasLinks) {
+              // Find the first valid URL in links
+              for (var i = 0; i < data.metadata.links.length; i++) {
+                var link = data.metadata.links[i];
+                if (typeof link === "string" && link.trim() && 
+                    (link.trim().startsWith("http://") || link.trim().startsWith("https://"))) {
+                  firstLink = link.trim();
+                  break;
+                }
+              }
+            }
+            
+            if (firstLink) {
+              // Load the first documentation link in the iframe
+              console.log("[window.onmessage] Loading documentation link in iframe:", firstLink);
               currentMessage.hidden = true;
-              renderMetadata(data.metadata, targetTab);
+              currentFrame.hidden = false;
+              if (currentFrame.src !== firstLink) {
+                currentFrame.src = firstLink;
+              }
+              if (hasMetadata) {
+                renderMetadata(data.metadata, targetTab);
+              } else {
+                currentMetadata.hidden = true;
+              }
             } else {
+              // No URL and no links to display
+              currentFrame.hidden = true;
+              currentFrame.removeAttribute("src");
+
+              if (hasMetadata) {
+                console.log("[window.onmessage] Showing metadata without URL");
+                // Always hide placeholder and render metadata
+                currentMessage.hidden = true;
+                renderMetadata(data.metadata, targetTab);
+              } else {
               console.log("[window.onmessage] Showing placeholder message");
               // Clear and hide metadata
               currentMetadata.innerHTML = "";
@@ -749,6 +876,7 @@
                   currentSecondary.textContent =
                     "Try selecting a different component or run a rescan.";
               }
+              }
             }
           }
         }
@@ -756,4 +884,3 @@
     </script>
   </body>
 </html>
-
