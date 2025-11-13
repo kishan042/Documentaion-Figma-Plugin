@@ -16,7 +16,7 @@
       body {
         height: 100%;
         margin: 0;
-        font-family: "Inter", system-ui, sans-serif;
+        font-family: system-ui, -apple-system, sans-serif;
         background: radial-gradient(circle at top, #1e293b 0%, #020617 55%, #010314 100%);
         color: #e2e8f0;
       }
@@ -72,6 +72,7 @@
 
       .panel {
         flex: 1;
+        min-height: 0;
         background: rgba(15, 23, 42, 0.6);
         border: 1px solid rgba(148, 163, 184, 0.12);
         border-radius: 20px;
@@ -79,15 +80,18 @@
         display: flex;
         flex-direction: column;
         gap: 20px;
+        overflow: hidden;
       }
 
-      .panel[data-mode="documentation"] {
+      .panel[data-mode="documentation"],
+      .panel[data-mode="inspect"] {
         border: 2px dotted rgba(148, 163, 184, 0.35);
         background: rgba(15, 23, 42, 0.4);
       }
 
       .view {
         flex: 1;
+        min-height: 0;
         display: flex;
         flex-direction: column;
       }
@@ -111,9 +115,181 @@
         border-radius: 16px;
       }
 
+      .doc-message[hidden] {
+        display: none !important;
+      }
+
       .doc-message strong {
         font-size: 14px;
         color: #f1f5f9;
+      }
+
+      .doc-metadata {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        overflow-y: auto;
+        overflow-x: hidden;
+        padding: 8px 0;
+        color: #e2e8f0;
+        font-size: 13px;
+        line-height: 1.6;
+      }
+
+      .doc-metadata::-webkit-scrollbar {
+        width: 8px;
+      }
+
+      .doc-metadata::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.3);
+        border-radius: 4px;
+      }
+
+      .doc-metadata::-webkit-scrollbar-thumb {
+        background: rgba(148, 163, 184, 0.4);
+        border-radius: 4px;
+      }
+
+      .doc-metadata::-webkit-scrollbar-thumb:hover {
+        background: rgba(148, 163, 184, 0.6);
+      }
+
+      .metadata-item {
+        padding: 12px 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      }
+
+      .metadata-item:last-child {
+        border-bottom: none;
+      }
+
+      .metadata-label {
+        font-weight: 600;
+        color: #94a3b8;
+        margin-bottom: 8px;
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+      }
+
+      .metadata-value {
+        color: #f1f5f9;
+        word-break: break-word;
+        font-size: 13px;
+      }
+
+      .metadata-value a {
+        color: #60a5fa;
+        text-decoration: none;
+      }
+
+      .metadata-value a:hover {
+        text-decoration: underline;
+      }
+
+      .doc-links {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .doc-link-item {
+        display: flex;
+        align-items: center;
+        gap: 10px;
+        padding: 12px 16px;
+        background: rgba(59, 130, 246, 0.08);
+        border: 1px solid rgba(59, 130, 246, 0.2);
+        border-radius: 12px;
+        transition: all 0.2s;
+        text-decoration: none;
+      }
+
+      .doc-link-item:hover {
+        background: rgba(59, 130, 246, 0.15);
+        border-color: rgba(59, 130, 246, 0.4);
+      }
+
+      .doc-link-icon {
+        flex-shrink: 0;
+        width: 20px;
+        height: 20px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        color: #60a5fa;
+        font-size: 16px;
+      }
+
+      .doc-link-content {
+        flex: 1;
+        min-width: 0;
+      }
+
+      .doc-link-url {
+        color: #f1f5f9;
+        font-size: 13px;
+        font-weight: 500;
+        text-decoration: none;
+        display: block;
+        overflow: hidden;
+        text-overflow: ellipsis;
+        white-space: nowrap;
+      }
+
+      .doc-link-url:hover {
+        color: #60a5fa;
+      }
+
+
+      .metadata-list {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+      }
+
+      .metadata-list li {
+        padding: 4px 0;
+        color: #cbd5f5;
+      }
+
+      .variable-row {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+        padding: 8px 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.08);
+      }
+
+      .variable-row:last-child {
+        border-bottom: none;
+      }
+
+      .variable-property {
+        font-size: 11px;
+        color: #64748b;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        font-weight: 600;
+      }
+
+      .variable-detail {
+        display: flex;
+        flex-direction: column;
+        gap: 6px;
+      }
+
+      .variable-name {
+        font-size: 14px;
+        color: #f1f5f9;
+        font-weight: 500;
+      }
+
+      .variable-value {
+        font-size: 12px;
+        color: #94a3b8;
+        font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
+        word-break: break-all;
       }
 
       .doc-frame {
@@ -204,6 +380,7 @@
     <div class="app">
       <nav class="tabs" role="tablist">
         <button class="tab active" type="button" role="tab" aria-selected="true" data-target="overview">Overview</button>
+        <button class="tab" type="button" role="tab" aria-selected="false" data-target="inspect">Inspect</button>
         <button class="tab" type="button" role="tab" aria-selected="false" data-target="documentation">Documentation</button>
       </nav>
       <section class="panel" data-mode="overview">
@@ -231,29 +408,226 @@
             </article>
           </div>
         </div>
+        <div class="view" data-panel="inspect" data-state="hidden">
+          <div class="doc-message">
+            <strong data-doc-primary>Select a component or instance to display the correct documentation.</strong>
+            <span data-doc-secondary>The documentation link will load inside this panel once a component with attached docs is selected.</span>
+          </div>
+          <div class="doc-metadata" hidden></div>
+          <iframe class="doc-frame" title="Component documentation" hidden sandbox="allow-same-origin allow-scripts"></iframe>
+        </div>
         <div class="view" data-panel="documentation" data-state="hidden">
           <div class="doc-message">
             <strong data-doc-primary>Select a component or instance to display the correct documentation.</strong>
             <span data-doc-secondary>The documentation link will load inside this panel once a component with attached docs is selected.</span>
           </div>
+          <div class="doc-metadata" hidden></div>
           <iframe class="doc-frame" title="Component documentation" hidden sandbox="allow-same-origin allow-scripts"></iframe>
         </div>
         <button class="rescan" type="button">Rescan</button>
       </section>
     </div>
     <script>
+      console.log("[UI INIT] UI script loaded and starting");
       const tabs = Array.from(document.querySelectorAll(".tab"));
       const views = Array.from(document.querySelectorAll(".view[data-panel]"));
-      const docMessage = document.querySelector(".doc-message");
-      const docPrimary = document.querySelector("[data-doc-primary]");
-      const docSecondary = document.querySelector("[data-doc-secondary]");
-      const docFrame = document.querySelector(".doc-frame");
       const panel = document.querySelector(".panel");
       const rescanButton = document.querySelector(".rescan");
+      
+      // Get elements for both inspect and documentation tabs
+      const inspectView = document.querySelector('.view[data-panel="inspect"]');
+      const documentationView = document.querySelector('.view[data-panel="documentation"]');
+      
+      const inspectMessage = inspectView.querySelector(".doc-message");
+      const inspectMetadata = inspectView.querySelector(".doc-metadata");
+      const inspectPrimary = inspectView.querySelector("[data-doc-primary]");
+      const inspectSecondary = inspectView.querySelector("[data-doc-secondary]");
+      const inspectFrame = inspectView.querySelector(".doc-frame");
+      
+      const docMessage = documentationView.querySelector(".doc-message");
+      const docMetadata = documentationView.querySelector(".doc-metadata");
+      const docPrimary = documentationView.querySelector("[data-doc-primary]");
+      const docSecondary = documentationView.querySelector("[data-doc-secondary]");
+      const docFrame = documentationView.querySelector(".doc-frame");
+      
       const defaultPrimary = docPrimary.textContent;
       const defaultSecondary = docSecondary.textContent;
 
+      function renderMetadata(metadata, targetTab) {
+        console.log("[renderMetadata] Called with metadata:", metadata, "targetTab:", targetTab);
+        
+        // Determine which tab's elements to update
+        const isInspect = targetTab === "inspect";
+        const currentMetadata = isInspect ? inspectMetadata : docMetadata;
+        const currentMessage = isInspect ? inspectMessage : docMessage;
+        
+        if (!metadata) {
+          console.log("[renderMetadata] No metadata, hiding container");
+          currentMetadata.innerHTML = "";
+          currentMetadata.hidden = true;
+          return;
+        }
+
+        console.log("[renderMetadata] Rendering metadata:", JSON.stringify(metadata, null, 2));
+        var html = "";
+
+        function addItem(label, value) {
+          if (value === null || value === undefined || value === "") {
+            return;
+          }
+          html += '<div class="metadata-item">';
+          html += '<div class="metadata-label">' + escapeHtml(label) + "</div>";
+          if (Array.isArray(value)) {
+            if (value.length > 0) {
+              html += '<ul class="metadata-list">';
+              for (var i = 0; i < value.length; i += 1) {
+                var item = value[i];
+                if (typeof item === "string" && item.trim()) {
+                  var trimmed = item.trim();
+                  if (trimmed.startsWith("http://") || trimmed.startsWith("https://")) {
+                    html += '<li><a href="' + escapeHtml(trimmed) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(trimmed) + "</a></li>";
+                  } else {
+                    html += "<li>" + escapeHtml(trimmed) + "</li>";
+                  }
+                }
+              }
+              html += "</ul>";
+            }
+          } else {
+            var strValue = String(value);
+            if (strValue.startsWith("http://") || strValue.startsWith("https://")) {
+              html += '<div class="metadata-value"><a href="' + escapeHtml(strValue) + '" target="_blank" rel="noopener noreferrer">' + escapeHtml(strValue) + "</a></div>";
+            } else {
+              html += '<div class="metadata-value">' + escapeHtml(strValue) + "</div>";
+            }
+          }
+          html += "</div>";
+        }
+
+        function addVariables(label, tokens) {
+          if (!tokens || !Array.isArray(tokens) || tokens.length === 0) {
+            return;
+          }
+          html += '<div class="metadata-item">';
+          html += '<div class="metadata-label">' + escapeHtml(label) + "</div>";
+          html += '<div class="metadata-value">';
+          
+          for (var i = 0; i < tokens.length; i += 1) {
+            var token = tokens[i].trim();
+            if (!token) continue;
+            
+            // Parse the token string: "Fill Variable: Background/page default (#FF0000)"
+            var propertyMatch = token.match(/^(.+?)\s+Variable:\s+(.+?)(?:\s+\(([^)]+)\))?$/);
+            
+            if (propertyMatch) {
+              var property = propertyMatch[1]; // "Fill" or "Fill Color"
+              var variableName = propertyMatch[2]; // "Background/page default" or "Color"
+              var value = propertyMatch[3] || ""; // "#FF0000" or hex value
+              
+              html += '<div class="variable-row">';
+              html += '<div class="variable-property">' + escapeHtml(property) + '</div>';
+              html += '<div class="variable-detail">';
+              html += '<div class="variable-name">' + escapeHtml(variableName) + '</div>';
+              if (value) {
+                html += '<div class="variable-value">' + escapeHtml(value) + '</div>';
+              }
+              html += '</div>';
+              html += '</div>';
+            } else {
+              // Fallback for tokens that don't match the pattern
+              html += '<div class="variable-row">';
+              html += '<div class="variable-name">' + escapeHtml(token) + '</div>';
+              html += '</div>';
+            }
+          }
+          
+          html += "</div>";
+          html += "</div>";
+        }
+
+        // Determine the contextual label based on type
+        var nameLabel = "Layer name";
+        if (metadata.type === "COMPONENT" || metadata.type === "COMPONENT_SET") {
+          nameLabel = "Component name";
+        } else if (metadata.type === "INSTANCE") {
+          nameLabel = "Instance name";
+        }
+        
+        addItem(nameLabel, metadata.name);
+        if (metadata.componentName && metadata.componentName !== metadata.name) {
+          addItem("Component Name", metadata.componentName);
+        }
+        
+        // Add description if available
+        if (metadata.description && metadata.description.trim()) {
+          addItem("Description", metadata.description);
+        }
+        
+        // Format type: Convert "INSTANCE" to "Instance"
+        var formattedType = metadata.type;
+        if (formattedType) {
+          formattedType = formattedType.charAt(0).toUpperCase() + formattedType.slice(1).toLowerCase();
+          // Handle special cases like COMPONENT_SET
+          formattedType = formattedType.replace(/_/g, ' ');
+          // Capitalize each word after space
+          formattedType = formattedType.replace(/\b\w/g, function(char) {
+            return char.toUpperCase();
+          });
+        }
+        
+        addItem("Type", formattedType);
+        
+        // Check if variables are being used
+        var hasVariables = metadata.tokens && metadata.tokens.length > 0;
+        
+        if (hasVariables) {
+          addVariables("Figma Variables", metadata.tokens);
+        }
+        
+        // Only show styles if no variables are being used
+        if (!hasVariables && metadata.styles && metadata.styles.length > 0) {
+          addItem("Styles", metadata.styles);
+        }
+        // Add documentation links with enhanced styling
+        if (metadata.links && metadata.links.length > 0) {
+          html += '<div class="metadata-item">';
+          html += '<div class="metadata-label">Documentation Links</div>';
+          html += '<div class="doc-links">';
+          
+          for (var i = 0; i < metadata.links.length; i += 1) {
+            var link = metadata.links[i];
+            if (typeof link === "string" && link.trim()) {
+              var trimmedLink = link.trim();
+              if (trimmedLink.startsWith("http://") || trimmedLink.startsWith("https://")) {
+                html += '<a href="' + escapeHtml(trimmedLink) + '" target="_blank" rel="noopener noreferrer" class="doc-link-item">';
+                html += '<div class="doc-link-icon">🔗</div>';
+                html += '<div class="doc-link-content">';
+                html += '<span class="doc-link-url">' + escapeHtml(trimmedLink) + '</span>';
+                html += '</div>';
+                html += '</a>';
+              }
+            }
+          }
+          
+          html += '</div>';
+          html += '</div>';
+        }
+
+        currentMetadata.innerHTML = html;
+        currentMetadata.hidden = false;
+        
+        // Always hide the placeholder message when rendering metadata
+        currentMessage.hidden = true;
+      }
+
+      function escapeHtml(text) {
+        var div = document.createElement("div");
+        div.textContent = text;
+        return div.innerHTML;
+      }
+
       function setActiveTab(targetId) {
+        console.log("[setActiveTab] Switching to tab:", targetId);
         tabs.forEach((tab) => {
           const isActive = tab.dataset.target === targetId;
           tab.classList.toggle("active", isActive);
@@ -266,7 +640,15 @@
         });
 
         panel.dataset.mode = targetId;
-        rescanButton.hidden = targetId === "documentation";
+        rescanButton.hidden = targetId === "documentation" || targetId === "inspect";
+
+        if (targetId === "documentation" || targetId === "inspect") {
+          console.log("[setActiveTab] " + targetId + " tab activated, requesting metadata");
+          parent.postMessage(
+            { pluginMessage: { type: "request-documentation", tab: targetId } },
+            "*"
+          );
+        }
       }
 
       tabs.forEach((tab) => {
@@ -276,48 +658,101 @@
       });
 
       rescanButton.addEventListener("click", () => {
+        console.log("[UI] Rescan button clicked");
         parent.postMessage(
           { pluginMessage: { type: "request-documentation" } },
           "*"
         );
+        console.log("[UI] Rescan message sent");
       });
 
-      window.addEventListener("message", (event) => {
-        if (event.data?.type === "documentation-link") {
-          if (event.data.url) {
-            docMessage.hidden = true;
-            docFrame.hidden = false;
-            if (docFrame.src !== event.data.url) {
-              docFrame.src = event.data.url;
+      console.log("[UI INIT] All event listeners attached");
+      console.log("[UI INIT] UI fully initialized");
+
+      window.onmessage = function (event) {
+        console.log("[window.onmessage] Raw event received:", event);
+        console.log("[window.onmessage] event.data:", event.data);
+        console.log("[window.onmessage] event.data type:", typeof event.data);
+        
+        var message = event.data;
+        
+        // Handle both direct messages and wrapped messages
+        if (message && message.pluginMessage) {
+          message = message.pluginMessage;
+          console.log("[window.onmessage] Unwrapped pluginMessage:", message);
+        }
+        
+        if (message && message.type === "documentation-link") {
+          console.log("[window.onmessage] Documentation message:", JSON.stringify(message, null, 2));
+          var data = message;
+          
+          // Determine which tab to update (default to current active tab)
+          var targetTab = data.tab || panel.dataset.mode;
+          var isInspect = targetTab === "inspect";
+          
+          // Select the correct elements based on target tab
+          var currentMessage = isInspect ? inspectMessage : docMessage;
+          var currentMetadata = isInspect ? inspectMetadata : docMetadata;
+          var currentPrimary = isInspect ? inspectPrimary : docPrimary;
+          var currentSecondary = isInspect ? inspectSecondary : docSecondary;
+          var currentFrame = isInspect ? inspectFrame : docFrame;
+          
+          var hasMetadata = data.metadata !== null && data.metadata !== undefined;
+          console.log("[window.onmessage] Has metadata:", hasMetadata, "Has URL:", !!data.url, "Target tab:", targetTab);
+
+          if (data.url) {
+            console.log("[window.onmessage] Showing iframe with URL:", data.url);
+            currentMessage.hidden = true;
+            currentFrame.hidden = false;
+            if (currentFrame.src !== data.url) {
+              currentFrame.src = data.url;
+            }
+            if (hasMetadata) {
+              renderMetadata(data.metadata, targetTab);
+            } else {
+              currentMetadata.hidden = true;
             }
           } else {
-            docFrame.hidden = true;
-            docMessage.hidden = false;
-            docFrame.removeAttribute("src");
+            console.log("[window.onmessage] No URL, reason:", data.reason);
+            currentFrame.hidden = true;
+            currentFrame.removeAttribute("src");
 
-            switch (event.data.reason) {
-              case "missing":
-                docPrimary.textContent = "Documentation unavailable.";
-                docSecondary.textContent =
-                  "This component or instance does not have an attached documentation link.";
-                break;
-              case "unsupported":
-                docPrimary.textContent = "Unsupported selection.";
-                docSecondary.textContent =
-                  "Select a design system component or instance to preview documentation.";
-                break;
-              case "no-selection":
-                docPrimary.textContent = defaultPrimary;
-                docSecondary.textContent = defaultSecondary;
-                break;
-              default:
-                docPrimary.textContent = "Unable to load documentation.";
-                docSecondary.textContent =
-                  "Try selecting a different component or run a rescan.";
+            if (hasMetadata) {
+              console.log("[window.onmessage] Showing metadata without URL");
+              // Always hide placeholder and render metadata
+              currentMessage.hidden = true;
+              renderMetadata(data.metadata, targetTab);
+            } else {
+              console.log("[window.onmessage] Showing placeholder message");
+              // Clear and hide metadata
+              currentMetadata.innerHTML = "";
+              currentMetadata.hidden = true;
+              currentMessage.hidden = false;
+
+              switch (data.reason) {
+                case "missing":
+                  currentPrimary.textContent = "Documentation unavailable.";
+                  currentSecondary.textContent =
+                    "This component or instance does not have an attached documentation link.";
+                  break;
+                case "unsupported":
+                  currentPrimary.textContent = "Unsupported selection.";
+                  currentSecondary.textContent =
+                    "Select a design system component or instance to preview documentation.";
+                  break;
+                case "no-selection":
+                  currentPrimary.textContent = defaultPrimary;
+                  currentSecondary.textContent = defaultSecondary;
+                  break;
+                default:
+                  currentPrimary.textContent = "Unable to load documentation.";
+                  currentSecondary.textContent =
+                    "Try selecting a different component or run a rescan.";
+              }
             }
           }
         }
-      });
+      };
     </script>
   </body>
 </html>
