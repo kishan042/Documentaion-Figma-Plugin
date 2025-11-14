@@ -186,18 +186,22 @@ function extractStyles(node) {
 
 function extractLinks(node) {
   var links = [];
-  console.log("[extractLinks] Starting extraction for node:", node.name);
+  console.log("[extractLinks] Starting extraction for node:", node.name, "| Type:", node.type);
+  console.log("[extractLinks] Node has documentationLinks property:", "documentationLinks" in node);
 
   try {
     // Check Figma's native documentationLinks property (PRIORITY)
     if ("documentationLinks" in node && Array.isArray(node.documentationLinks)) {
       console.log("[extractLinks] Found documentationLinks array, length:", node.documentationLinks.length);
+      console.log("[extractLinks] documentationLinks content:", JSON.stringify(node.documentationLinks));
       for (var i = 0; i < node.documentationLinks.length; i += 1) {
         var docLink = node.documentationLinks[i];
+        console.log("[extractLinks] Processing docLink", i, ":", typeof docLink, docLink);
         if (docLink && typeof docLink === "object" && "uri" in docLink) {
           var uri = docLink.uri.trim();
+          console.log("[extractLinks] Extracted URI from object:", uri);
           if (uri && (uri.startsWith("http://") || uri.startsWith("https://"))) {
-            console.log("[extractLinks] Found documentation link:", uri);
+            console.log("[extractLinks] ✓ Found valid documentation link:", uri);
             // Check for duplicates before adding
             if (links.indexOf(uri) === -1) {
               links.push(uri);
@@ -205,14 +209,17 @@ function extractLinks(node) {
           }
         } else if (typeof docLink === "string") {
           var trimmedLink = docLink.trim();
+          console.log("[extractLinks] Processing string docLink:", trimmedLink);
           if (trimmedLink && (trimmedLink.startsWith("http://") || trimmedLink.startsWith("https://"))) {
-            console.log("[extractLinks] Found documentation link (string):", trimmedLink);
+            console.log("[extractLinks] ✓ Found valid documentation link (string):", trimmedLink);
             if (links.indexOf(trimmedLink) === -1) {
               links.push(trimmedLink);
             }
           }
         }
       }
+    } else {
+      console.log("[extractLinks] No documentationLinks property or not an array");
     }
   } catch (e) {
     console.log("[extractLinks] Error checking documentationLinks:", e);
@@ -232,7 +239,7 @@ function extractLinks(node) {
           console.log("[extractLinks] Found URL in description:", url);
           // Check for duplicates before adding
           if (links.indexOf(url) === -1) {
-            links.push(url);
+          links.push(url);
           }
         }
       }
@@ -267,7 +274,7 @@ function extractLinks(node) {
               console.log("[extractLinks] Found link in plugin data key '" + key + "':", trimmed);
               // Check for duplicates before adding
               if (links.indexOf(trimmed) === -1) {
-                links.push(trimmed);
+              links.push(trimmed);
               }
             }
           }
@@ -322,7 +329,7 @@ function extractLinks(node) {
             console.log("[extractLinks] Found link in component property '" + propKey + "':", propValue);
             // Check for duplicates before adding
             if (links.indexOf(propValue) === -1) {
-              links.push(propValue);
+            links.push(propValue);
             }
           }
         }
@@ -337,27 +344,36 @@ function extractLinks(node) {
 }
 
 function extractMetadata(node, mainComponent, selectedModes) {
-  console.log("[extractMetadata] Starting extraction for node:", node.name, node.type);
-  console.log("[extractMetadata] Node ID:", node.id);
-  console.log("[extractMetadata] Selected modes for variable resolution:", selectedModes);
+  console.log("[extractMetadata] ========== STARTING METADATA EXTRACTION ==========");
+  console.log("[extractMetadata] Node:", node.name, "| Type:", node.type, "| ID:", node.id);
+  console.log("[extractMetadata] Selected modes for variable resolution:", JSON.stringify(selectedModes));
   console.log("[extractMetadata] Node has description:", "description" in node);
+  console.log("[extractMetadata] Node has documentationLinks:", "documentationLinks" in node);
+  console.log("[extractMetadata] Node has boundVariables:", "boundVariables" in node);
+  console.log("[extractMetadata] Node has componentProperties:", "componentProperties" in node);
+  console.log("[extractMetadata] Node has variantProperties:", "variantProperties" in node);
+  
   if ("description" in node) {
     console.log("[extractMetadata] Node description:", node.description);
   }
+  if ("documentationLinks" in node && Array.isArray(node.documentationLinks)) {
+    console.log("[extractMetadata] Node documentationLinks length:", node.documentationLinks.length);
+  }
   
   if (mainComponent) {
-    console.log("[extractMetadata] Also checking main component:", mainComponent.name, "| Type:", mainComponent.type);
-    console.log("[extractMetadata] Main component ID:", mainComponent.id);
+    console.log("[extractMetadata] Main component:", mainComponent.name, "| Type:", mainComponent.type, "| ID:", mainComponent.id);
     console.log("[extractMetadata] Main component has description:", "description" in mainComponent);
+    console.log("[extractMetadata] Main component has documentationLinks:", "documentationLinks" in mainComponent);
+    console.log("[extractMetadata] Main component has boundVariables:", "boundVariables" in mainComponent);
     if ("description" in mainComponent) {
       console.log("[extractMetadata] Main component description:", mainComponent.description);
     }
-    console.log("[extractMetadata] Main component has documentationLinks:", "documentationLinks" in mainComponent);
     if ("documentationLinks" in mainComponent && Array.isArray(mainComponent.documentationLinks)) {
       console.log("[extractMetadata] Main component documentationLinks length:", mainComponent.documentationLinks.length);
+      console.log("[extractMetadata] Main component documentationLinks:", JSON.stringify(mainComponent.documentationLinks));
     }
   } else {
-    console.log("[extractMetadata] WARNING: No main component provided (this is normal for non-instances)");
+    console.log("[extractMetadata] No main component provided (normal for non-instances)");
   }
   
   var metadata = {
@@ -373,8 +389,148 @@ function extractMetadata(node, mainComponent, selectedModes) {
     colorVariables: [],
     typographyVariables: [],
     spacingVariables: [],
-    cornerRadiusVariables: []
+    cornerRadiusVariables: [],
+    componentProps: []
   };
+
+  function dedupeVariableList(list) {
+    if (!list || list.length === 0) {
+      return [];
+    }
+    var seen = {};
+    var result = [];
+    for (var i = 0; i < list.length; i += 1) {
+      var item = list[i];
+      var key =
+        (item.property || "") +
+        "|" +
+        (item.name || "") +
+        "|" +
+        (item.value || "");
+      if (!seen[key]) {
+        seen[key] = true;
+        result.push(item);
+      }
+    }
+    return result;
+  }
+
+  var componentPropDefinitions = null;
+  try {
+    if (mainComponent) {
+      // For variants, we need to get definitions from the parent component set
+      if (mainComponent.type === "COMPONENT" && mainComponent.parent && mainComponent.parent.type === "COMPONENT_SET") {
+        console.log("[extractMetadata] Main component is a variant, getting definitions from component set");
+        componentPropDefinitions = mainComponent.parent.componentPropertyDefinitions || null;
+      } else if (mainComponent.componentPropertyDefinitions) {
+        // For non-variant components, get directly
+        console.log("[extractMetadata] Getting definitions from main component");
+        componentPropDefinitions = mainComponent.componentPropertyDefinitions;
+      }
+    }
+  } catch (defError) {
+    console.log("[extractMetadata] Could not access componentPropertyDefinitions:", defError);
+    componentPropDefinitions = null;
+  }
+
+  function getComponentPropDisplayName(propKey) {
+    if (
+      componentPropDefinitions &&
+      componentPropDefinitions[propKey] &&
+      componentPropDefinitions[propKey].name
+    ) {
+      return componentPropDefinitions[propKey].name;
+    }
+    return propKey;
+  }
+
+  function formatPropEntry(name, value) {
+    var trimmedName = (name || "").trim();
+    var trimmedValue = value !== undefined && value !== null ? String(value).trim() : "";
+    if (!trimmedName) {
+      return null;
+    }
+    return trimmedName + " = " + trimmedValue;
+  }
+
+  function resolveInstanceSwapName(nodeId) {
+    if (!nodeId) {
+      return "";
+    }
+    try {
+      var swapNode = figma.getNodeById(nodeId);
+      if (swapNode && "name" in swapNode) {
+        return swapNode.name;
+      }
+    } catch (e) {
+      console.log("[extractMetadata] Could not resolve instance swap name for ID:", nodeId, e);
+    }
+    return nodeId;
+  }
+    // Component / variant props (instances only)
+    try {
+      if (node.type === "INSTANCE") {
+        var componentPropsList = [];
+        var seenProps = {}; // Track which props we've already added
+
+        if (node.variantProperties) {
+          var variantKeys = Object.keys(node.variantProperties);
+          for (var vp = 0; vp < variantKeys.length; vp += 1) {
+            var variantKey = variantKeys[vp];
+            var variantValue = node.variantProperties[variantKey];
+            var entry = formatPropEntry(variantKey, variantValue);
+            if (entry) {
+              componentPropsList.push(entry);
+              seenProps[variantKey] = true; // Mark this prop as seen
+            }
+          }
+        }
+
+        if (node.componentProperties) {
+          var compPropKeys = Object.keys(node.componentProperties);
+          for (var cp = 0; cp < compPropKeys.length; cp += 1) {
+            var propKey = compPropKeys[cp];
+            var prop = node.componentProperties[propKey];
+            if (!prop) continue;
+            
+            var propName = getComponentPropDisplayName(propKey);
+            
+            // Skip if we already added this prop from variantProperties
+            if (seenProps[propName] || seenProps[propKey]) {
+              console.log("[extractMetadata] Skipping duplicate prop:", propName);
+              continue;
+            }
+            
+            var displayValue = "";
+
+            switch (prop.type) {
+              case "BOOLEAN":
+                displayValue = prop.value ? "true" : "false";
+                break;
+              case "TEXT":
+                displayValue = prop.value !== undefined ? '"' + String(prop.value) + '"' : '""';
+                break;
+              case "INSTANCE_SWAP":
+                displayValue = resolveInstanceSwapName(prop.value);
+                break;
+              default:
+                displayValue = prop.value !== undefined ? String(prop.value) : "";
+            }
+
+            var compEntry = formatPropEntry(propName, displayValue);
+            if (compEntry) {
+              componentPropsList.push(compEntry);
+              seenProps[propName] = true;
+            }
+          }
+        }
+
+        metadata.componentProps = componentPropsList;
+      }
+    } catch (propError) {
+      console.log("[extractMetadata] Error extracting component props:", propError);
+    }
+
 
   // Extract description from node or main component
   try {
@@ -637,16 +793,22 @@ function extractMetadata(node, mainComponent, selectedModes) {
 
   try {
     // Extract links from instance, main component, and parent component set
-    console.log("[extractMetadata] About to extract links from node:", node.name, "type:", node.type);
+    console.log("[extractMetadata] ========== EXTRACTING LINKS ==========");
+    console.log("[extractMetadata] Extracting links from node:", node.name, "type:", node.type);
     metadata.links = extractLinks(node);
+    console.log("[extractMetadata] Links from node:", metadata.links.length, "→", metadata.links);
     
     if (mainComponent && mainComponent !== node) {
-      console.log("[extractMetadata] About to extract links from mainComponent:", mainComponent.name, "type:", mainComponent.type);
+      console.log("[extractMetadata] Extracting links from mainComponent:", mainComponent.name, "type:", mainComponent.type);
       var mainComponentLinks = extractLinks(mainComponent);
+      console.log("[extractMetadata] Links from main component:", mainComponentLinks.length, "→", mainComponentLinks);
       // Merge links, avoiding duplicates
       for (var i = 0; i < mainComponentLinks.length; i += 1) {
         if (metadata.links.indexOf(mainComponentLinks[i]) === -1) {
+          console.log("[extractMetadata] Adding link from main component:", mainComponentLinks[i]);
           metadata.links.push(mainComponentLinks[i]);
+        } else {
+          console.log("[extractMetadata] Skipping duplicate link:", mainComponentLinks[i]);
         }
       }
       
@@ -657,10 +819,13 @@ function extractMetadata(node, mainComponent, selectedModes) {
           if (mainComponent.parent.type === "COMPONENT_SET") {
             console.log("[extractMetadata] Main component is a variant, checking parent component set");
             var componentSetLinks = extractLinks(mainComponent.parent);
-            console.log("[extractMetadata] Found", componentSetLinks.length, "links from component set");
+            console.log("[extractMetadata] Links from component set:", componentSetLinks.length, "→", componentSetLinks);
             for (var i = 0; i < componentSetLinks.length; i += 1) {
               if (metadata.links.indexOf(componentSetLinks[i]) === -1) {
+                console.log("[extractMetadata] Adding link from component set:", componentSetLinks[i]);
                 metadata.links.push(componentSetLinks[i]);
+              } else {
+                console.log("[extractMetadata] Skipping duplicate link from component set:", componentSetLinks[i]);
               }
             }
           }
@@ -673,9 +838,15 @@ function extractMetadata(node, mainComponent, selectedModes) {
     } else {
       console.log("[extractMetadata] Not checking mainComponent. mainComponent exists?", !!mainComponent, "different from node?", mainComponent !== node);
     }
-    console.log("[extractMetadata] Extracted links:", metadata.links);
+    console.log("[extractMetadata] ========== FINAL LINK COUNT:", metadata.links.length, "==========");
+    if (metadata.links.length > 0) {
+      console.log("[extractMetadata] Final links array:", JSON.stringify(metadata.links));
+    } else {
+      console.log("[extractMetadata] ⚠️  WARNING: No links extracted!");
+    }
   } catch (e) {
-    console.log("[extractMetadata] Error extracting links:", e);
+    console.log("[extractMetadata] ❌ ERROR extracting links:", e);
+    console.log("[extractMetadata] Error stack:", e.stack);
   }
 
   try {
@@ -930,8 +1101,8 @@ function extractMetadata(node, mainComponent, selectedModes) {
               var variableCategory = "other";
               
               try {
-                var valuesByMode = variable.valuesByMode;
-                var modeKeys = Object.keys(valuesByMode);
+                  var valuesByMode = variable.valuesByMode;
+                  var modeKeys = Object.keys(valuesByMode);
                 
                 // Determine which mode to use for this variable
                 var modeIdToUse = modeKeys[0]; // Default to first mode
@@ -951,7 +1122,7 @@ function extractMetadata(node, mainComponent, selectedModes) {
                   console.log("[extractMetadata] ✗ No selectedModes provided, using first mode:", modeIdToUse);
                 }
                 
-                if (modeKeys.length > 0) {
+                  if (modeKeys.length > 0) {
                   var value = valuesByMode[modeIdToUse];
                   console.log("[extractMetadata] Resolved value for mode", modeIdToUse, ":", value);
                   
@@ -1141,9 +1312,9 @@ function extractMetadata(node, mainComponent, selectedModes) {
                               }
                               if (!isDupe) {
                                 metadata.colorVariables.push(varObj);
-                              }
                             }
                           }
+                        }
                       }
                     } catch (varCheckError) {
                       console.log("[extractMetadata] Error checking variable", variable.name, ":", varCheckError);
@@ -1168,6 +1339,12 @@ function extractMetadata(node, mainComponent, selectedModes) {
   } catch (e) {
     console.log("[extractMetadata] Error extracting tokens:", e);
   }
+
+  // Remove duplicate entries
+  metadata.colorVariables = dedupeVariableList(metadata.colorVariables);
+  metadata.typographyVariables = dedupeVariableList(metadata.typographyVariables);
+  metadata.spacingVariables = dedupeVariableList(metadata.spacingVariables);
+  metadata.cornerRadiusVariables = dedupeVariableList(metadata.cornerRadiusVariables);
 
   // Sort color variables to ensure Fill comes before Stroke
   if (metadata.colorVariables && metadata.colorVariables.length > 0) {
@@ -1195,7 +1372,7 @@ function extractMetadata(node, mainComponent, selectedModes) {
   return metadata;
 }
 
-function notifyDocumentation(reason, url, metadata) {
+function notifyDocumentation(reason, url, metadata, tab) {
   if (reason === undefined || reason === null) {
     reason = "missing";
   }
@@ -1206,19 +1383,25 @@ function notifyDocumentation(reason, url, metadata) {
     reason: reason,
     metadata: metadata || null
   };
+  
+  // Include tab if specified (for manual tab switches)
+  if (tab) {
+    message.tab = tab;
+  }
 
   console.log("[notifyDocumentation] Posting message:", JSON.stringify(message, null, 2));
   figma.ui.postMessage(message);
 }
 
-function resolveDocumentationFromSelection(selectedModes) {
+function resolveDocumentationFromSelection(selectedModes, tab) {
   console.log("[resolveDocumentationFromSelection] Starting resolution");
   console.log("[resolveDocumentationFromSelection] Selected modes:", selectedModes);
+  console.log("[resolveDocumentationFromSelection] Requested tab:", tab);
   var selection = figma.currentPage.selection[0];
 
   if (!selection) {
     console.log("[resolveDocumentationFromSelection] No selection found");
-    notifyDocumentation("no-selection", null, null);
+    notifyDocumentation("no-selection", null, null, tab);
     return;
   }
 
@@ -1261,40 +1444,40 @@ function resolveDocumentationFromSelection(selectedModes) {
   
   // If no links in metadata, check plugin data as fallback
   if (!docUrl) {
-    try {
-      if ("getPluginData" in node) {
-        var keys = [
-          "documentation",
-          "documentationUrl",
-          "docUrl",
-          "docs",
-          "url"
-        ];
+  try {
+    if ("getPluginData" in node) {
+      var keys = [
+        "documentation",
+        "documentationUrl",
+        "docUrl",
+        "docs",
+        "url"
+      ];
 
-        for (var i = 0; i < keys.length; i += 1) {
-          var key = keys[i];
-          var value = node.getPluginData(key);
-          if (typeof value === "string") {
-            var trimmed = value.trim();
-            if (trimmed) {
-              docUrl = trimmed;
+      for (var i = 0; i < keys.length; i += 1) {
+        var key = keys[i];
+        var value = node.getPluginData(key);
+        if (typeof value === "string") {
+          var trimmed = value.trim();
+          if (trimmed) {
+            docUrl = trimmed;
               console.log("[resolveDocumentationFromSelection] Found doc URL from plugin data:", docUrl);
-              break;
-            }
+            break;
           }
         }
       }
-    } catch (e) {
-      console.log("[resolveDocumentationFromSelection] Error checking plugin data:", e);
+    }
+  } catch (e) {
+    console.log("[resolveDocumentationFromSelection] Error checking plugin data:", e);
     }
   }
 
   console.log("[resolveDocumentationFromSelection] Sending notification with metadata:", metadata !== null);
   console.log("[resolveDocumentationFromSelection] Final docUrl:", docUrl);
   if (docUrl) {
-    notifyDocumentation("success", docUrl, metadata);
+    notifyDocumentation("success", docUrl, metadata, tab);
   } else {
-    notifyDocumentation("missing", null, metadata);
+    notifyDocumentation("missing", null, metadata, tab);
   }
 }
 
@@ -1309,9 +1492,11 @@ figma.ui.onmessage = function (message) {
   if (message.type === "request-documentation") {
     console.log("[figma.ui.onmessage] ===== HANDLING REQUEST-DOCUMENTATION =====");
     var selectedModes = message.selectedModes || {};
+    var requestedTab = message.tab || null;
     console.log("[figma.ui.onmessage] Selected modes received:", JSON.stringify(selectedModes));
     console.log("[figma.ui.onmessage] Number of collections in selectedModes:", Object.keys(selectedModes).length);
-    resolveDocumentationFromSelection(selectedModes);
+    console.log("[figma.ui.onmessage] Requested tab:", requestedTab);
+    resolveDocumentationFromSelection(selectedModes, requestedTab);
   } else if (message.type === "scan-components") {
     console.log("[figma.ui.onmessage] Handling scan-components");
     scanFileForComponents();
@@ -1341,11 +1526,11 @@ figma.on("selectionchange", function () {
     console.log("[selectionchange] Current selection:", currentSelection);
     if (!currentSelection || currentSelection.length === 0) {
       console.log("[selectionchange] No selection");
-      notifyDocumentation("no-selection", null, null);
+      notifyDocumentation("no-selection", null, null, null); // No tab = auto-switch
     } else {
       console.log("[selectionchange] Selection count:", currentSelection.length);
       console.log("[selectionchange] First item:", currentSelection[0].name, currentSelection[0].type);
-      resolveDocumentationFromSelection();
+      resolveDocumentationFromSelection(null, null); // No modes, no tab = auto-switch
     }
   } catch (error) {
     console.log("[selectionchange] ERROR:", error);
@@ -1729,7 +1914,7 @@ async function checkForOutOfDateComponents(
 console.log("[PLUGIN INIT] Checking initial selection");
 setTimeout(function() {
   console.log("[PLUGIN INIT] Initial selection check timeout fired");
-  resolveDocumentationFromSelection();
+  resolveDocumentationFromSelection(null, null); // No modes, no tab = auto-switch on initial load
   // Also scan for components
   scanFileForComponents();
 }, 100);

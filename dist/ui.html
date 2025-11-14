@@ -1054,27 +1054,27 @@
         <div class="view" data-panel="overview">
           <!-- Overview Cards View -->
           <div id="overview-cards-view" class="overview-subview">
-            <div class="grid">
+          <div class="grid">
               <article class="card" data-card="components" id="components-card">
                 <p class="card-number" id="component-count">-</p>
                 <p class="card-label">Components</p>
                 <p class="card-description">detected in this file</p>
-              </article>
+            </article>
               <article class="card" data-card="instances">
                 <p class="card-number" id="instance-count">-</p>
                 <p class="card-label">Instances</p>
                 <p class="card-description">detected in this file</p>
-              </article>
+            </article>
               <article class="card" data-card="detachments">
                 <p class="card-number" id="detachment-count">-</p>
                 <p class="card-label">Detachments</p>
                 <p class="card-description">potentially detected</p>
-              </article>
+            </article>
               <article class="card" id="outofdate-card" data-card="outofdate">
                 <p class="card-number" id="outofdate-count">-</p>
                 <p class="card-label">Out of date</p>
                 <p class="card-description">components out of sync</p>
-              </article>
+            </article>
               <article class="card" data-card="code-missing">
                 <p class="card-number" id="codeconnect-count">-</p>
                 <p class="card-label">Code Connect</p>
@@ -1088,7 +1088,7 @@
               <div class="grid-placeholder" id="overview-empty" hidden>
                 <p class="placeholder-title">Nothing to show yet</p>
                 <p class="placeholder-text">Once we detect components, instances, detachments, or updates in this file, they'll appear here automatically.</p>
-              </div>
+          </div>
             </div>
           </div>
 
@@ -1692,23 +1692,8 @@
           html += "</div>";
         }
 
-        // Determine the contextual label based on type
-        var nameLabel = "Layer name";
-        if (metadata.type === "COMPONENT" || metadata.type === "COMPONENT_SET") {
-          nameLabel = "Component name";
-        } else if (metadata.type === "INSTANCE") {
-          nameLabel = "Instance name";
-        }
-        
-        addItem(nameLabel, metadata.name);
-        if (metadata.componentName && metadata.componentName !== metadata.name) {
-          addItem("Component Name", metadata.componentName);
-        }
-        
-        // Add description if available
-        if (metadata.description && metadata.description.trim()) {
-          addItem("Description", metadata.description);
-        }
+        // Always use "Component name" label regardless of type
+        addItem("Component name", metadata.name);
         
         // Format type: Convert "INSTANCE" to "Instance"
         var formattedType = metadata.type;
@@ -1722,7 +1707,32 @@
           });
         }
         
-        addItem("Type", formattedType);
+        // Classification comes after Component name
+        addItem("Classification", formattedType);
+
+        const hasComponentProps =
+          metadata.componentProps && metadata.componentProps.length > 0;
+
+        if (hasComponentProps) {
+          html += '<div class="metadata-item metadata-section">';
+          html += '<div class="metadata-section-title">Component Props</div>';
+          for (var i = 0; i < metadata.componentProps.length; i += 1) {
+            var propLine = metadata.componentProps[i];
+            html += '<div class="variable-row">';
+            html += '<div class="variable-detail" style="grid-column: 1 / -1;">';
+            html += '<div class="variable-name">' + escapeHtml(propLine) + "</div>";
+            html += "</div>";
+            html += "</div>";
+          }
+          html += "</div>";
+        } else if (metadata.componentName && metadata.componentName !== metadata.name) {
+          addItem("Component Name", metadata.componentName);
+        }
+        
+        // Add description if available
+        if (metadata.description && metadata.description.trim()) {
+          addItem("Description", metadata.description);
+        }
         
         // Add Code Connect status (only for components and instances)
         if (metadata.codeConnect !== undefined && 
@@ -1733,13 +1743,17 @@
         // Render variables in organized sections: Color, Typography, Spacing, Corner Radius
         var hasAnyVariables = false;
         
+        var colorVariables = metadata.colorVariables && metadata.colorVariables.length > 0
+          ? metadata.colorVariables
+          : parseStylesToFallbackColors(metadata.styles);
+
         // 1. Color Variables
-        if (metadata.colorVariables && metadata.colorVariables.length > 0) {
+        if (colorVariables && colorVariables.length > 0) {
           hasAnyVariables = true;
           html += '<div class="metadata-item metadata-section">';
-          html += '<div class="metadata-section-title">Color</div>';
-          for (var i = 0; i < metadata.colorVariables.length; i += 1) {
-            var colorVar = metadata.colorVariables[i];
+          html += '<div class="metadata-section-title">Colour</div>';
+          for (var i = 0; i < colorVariables.length; i += 1) {
+            var colorVar = colorVariables[i];
             html += '<div class="variable-row">';
             html += '<div class="variable-property">' + escapeHtml(colorVar.property) + '</div>';
             html += '<div class="variable-detail">';
@@ -1887,6 +1901,37 @@
       function createColorSwatch(hexColor) {
         if (!hexColor || !hexColor.startsWith('#')) return '';
         return '<span class="color-swatch" style="background-color: ' + hexColor + ';"></span>';
+      }
+
+      function parseStylesToFallbackColors(styles) {
+        var fallback = [];
+        if (!styles || !Array.isArray(styles)) {
+          return fallback;
+        }
+
+        for (var i = 0; i < styles.length; i += 1) {
+          var styleEntry = styles[i];
+          if (!styleEntry || typeof styleEntry !== "string") continue;
+
+          var parts = styleEntry.split(":");
+          if (parts.length < 2) continue;
+
+          var label = parts[0].trim();
+          var value = parts.slice(1).join(":").trim();
+
+          if (!value) continue;
+
+          if (label.toLowerCase().indexOf("fill") === 0 || label.toLowerCase().indexOf("stroke") === 0) {
+            var hexValue = rgbToHex(value);
+            fallback.push({
+              property: label,
+              name: label,
+              value: hexValue
+            });
+          }
+        }
+
+        return fallback;
       }
 
       function setActiveTab(targetId) {
@@ -2075,110 +2120,122 @@
           console.log("[window.onmessage] Documentation message:", JSON.stringify(message, null, 2));
           var data = message;
           
-          // Determine which tab to update (default to current active tab)
-          var targetTab = data.tab || panel.dataset.mode;
-          var isInspect = targetTab === "inspect";
-          
-          // Select the correct elements based on target tab
-          var currentMessage = isInspect ? inspectMessage : docMessage;
-          var currentMetadata = isInspect ? inspectMetadata : docMetadata;
-          var currentPrimary = isInspect ? inspectPrimary : docPrimary;
-          var currentSecondary = isInspect ? inspectSecondary : docSecondary;
-          
           var hasMetadata = data.metadata !== null && data.metadata !== undefined;
-          console.log("[window.onmessage] Has metadata:", hasMetadata, "Has URL:", !!data.url, "Target tab:", targetTab);
-
-          // Handle Inspect tab (no iframe)
-          if (isInspect) {
-            if (hasMetadata) {
-              console.log("[window.onmessage] Showing metadata in Inspect tab");
-              currentMessage.hidden = true;
-              renderMetadata(data.metadata, targetTab);
+          var hasUrl = !!data.url;
+          var hasLinks = hasMetadata && data.metadata.links && data.metadata.links.length > 0;
+          
+          // Smart default tab selection on initial load
+          var shouldAutoSwitchTab = !data.tab; // Only auto-switch if no specific tab was requested
+          
+          if (shouldAutoSwitchTab) {
+            console.log("[window.onmessage] Auto-selecting appropriate tab...");
+            console.log("[window.onmessage] Has URL:", hasUrl, "Has links:", hasLinks, "Has metadata:", hasMetadata);
+            
+            if (hasUrl || hasLinks) {
+              // Component/instance with documentation link → Documentation tab
+              console.log("[window.onmessage] Documentation link available, switching to Documentation tab");
+              setActiveTab("documentation");
+            } else if (hasMetadata) {
+              // Component/instance without link but has data → Inspect tab
+              console.log("[window.onmessage] No link but has metadata, switching to Inspect tab");
+              setActiveTab("inspect");
+            } else if (data.reason === "no-selection") {
+              // No selection → Overview tab
+              console.log("[window.onmessage] No selection, switching to Overview tab");
+              setActiveTab("overview");
+            }
+            // If unsupported or missing, stay on current tab
             } else {
-              console.log("[window.onmessage] Showing placeholder message in Inspect tab");
-              currentMetadata.innerHTML = "";
-              currentMetadata.hidden = true;
-              currentMessage.hidden = false;
-              
-              // Hide controls when no selection
-              var platformControl = document.getElementById('platform-control');
-              var collectionsControl = document.getElementById('collections-control');
-              if (platformControl) platformControl.classList.add('hidden');
-              if (collectionsControl) collectionsControl.classList.add('hidden');
+            console.log("[window.onmessage] Manual tab switch detected, staying on tab:", data.tab);
+            // User manually switched tabs, don't override their choice
+            // The tab is already active from the user's click
+            }
+
+          // Update both Inspect and Documentation tabs so user can switch between them
+          // We'll render content for both tabs, not just the active one
+          console.log("[window.onmessage] Updating both Inspect and Documentation tabs");
+          
+          // Update Inspect tab
+            if (hasMetadata) {
+            console.log("[window.onmessage] Rendering metadata in Inspect tab");
+            inspectMessage.hidden = true;
+            renderMetadata(data.metadata, "inspect");
+            } else {
+            console.log("[window.onmessage] Showing placeholder in Inspect tab");
+            inspectMetadata.innerHTML = "";
+            inspectMetadata.hidden = true;
+            inspectMessage.hidden = false;
+            
+            // Hide controls when no selection
+            var platformControl = document.getElementById('platform-control');
+            var collectionsControl = document.getElementById('collections-control');
+            if (platformControl) platformControl.classList.add('hidden');
+            if (collectionsControl) collectionsControl.classList.add('hidden');
 
               switch (data.reason) {
                 case "missing":
-                  currentPrimary.textContent = "No component data.";
-                  currentSecondary.textContent =
-                    "This component or instance does not have any data to display.";
+                inspectPrimary.textContent = "No component data.";
+                inspectSecondary.textContent = "This component or instance does not have any data to display.";
                   break;
                 case "unsupported":
-                  currentPrimary.textContent = "Unsupported selection.";
-                  currentSecondary.textContent =
-                    "Select a design system component or instance to inspect.";
+                inspectPrimary.textContent = "Unsupported selection.";
+                inspectSecondary.textContent = "Select a design system component or instance to inspect.";
                   break;
                 case "no-selection":
-                  currentPrimary.textContent = "Select a component or instance to display the correct information.";
-                  currentSecondary.textContent = "Component details will display here once a component or instance is selected.";
+                inspectPrimary.textContent = "Select a component or instance to display the correct information.";
+                inspectSecondary.textContent = "Component details will display here once a component or instance is selected.";
                   break;
                 default:
-                  currentPrimary.textContent = "Unable to load component data.";
-                  currentSecondary.textContent =
-                    "Try selecting a different component or run a rescan.";
+                inspectPrimary.textContent = "Unable to load component data.";
+                inspectSecondary.textContent = "Try selecting a different component or run a rescan.";
+            }
+          }
+          
+          // Update Documentation tab
+          // Check if we have a URL or links in metadata
+          var firstLink = null;
+          if (hasLinks) {
+            // Find the first valid URL in links
+            for (var i = 0; i < data.metadata.links.length; i++) {
+              var link = data.metadata.links[i];
+              if (typeof link === "string" && link.trim() && 
+                  (link.trim().startsWith("http://") || link.trim().startsWith("https://"))) {
+                firstLink = link.trim();
+                break;
               }
+            }
+          }
+          
+          var docLinkToShow = data.url || firstLink;
+          
+          if (docLinkToShow) {
+            // Show iframe with documentation link
+            console.log("[window.onmessage] Showing iframe with URL:", docLinkToShow);
+            docMessage.hidden = true;
+            docFrame.hidden = false;
+            docMetadata.hidden = true;
+            panel.classList.add('iframe-active');
+            if (docFrame.src !== docLinkToShow) {
+              docFrame.src = docLinkToShow;
             }
           } else {
-            // Handle Documentation tab (with iframe)
-            if (data.url) {
-              console.log("[window.onmessage] Showing iframe with URL:", data.url);
-              currentMessage.hidden = true;
-              docFrame.hidden = false;
-              currentMetadata.hidden = true; // Hide metadata, only show iframe
-              panel.classList.add('iframe-active'); // Remove padding for full-screen iframe
-              if (docFrame.src !== data.url) {
-                docFrame.src = data.url;
-            }
-          } else {
-            console.log("[window.onmessage] No URL, reason:", data.reason);
+            // No URL and no links - show message
+            console.log("[window.onmessage] No documentation link available");
+            docFrame.hidden = true;
+            docFrame.removeAttribute("src");
+            panel.classList.remove('iframe-active');
+            docMetadata.hidden = true;
+            docMessage.hidden = false;
             
-            // Check if metadata has documentation links to display in iframe
-            var hasLinks = hasMetadata && data.metadata.links && data.metadata.links.length > 0;
-            var firstLink = null;
-            
-            if (hasLinks) {
-              // Find the first valid URL in links
-              for (var i = 0; i < data.metadata.links.length; i++) {
-                var link = data.metadata.links[i];
-                if (typeof link === "string" && link.trim() && 
-                    (link.trim().startsWith("http://") || link.trim().startsWith("https://"))) {
-                  firstLink = link.trim();
-                  break;
-                }
-              }
-            }
-            
-            if (firstLink) {
-              // Load the first documentation link in the iframe
-              console.log("[window.onmessage] Loading documentation link in iframe:", firstLink);
-              currentMessage.hidden = true;
-                docFrame.hidden = false;
-                currentMetadata.hidden = true; // Hide metadata, only show iframe
-                panel.classList.add('iframe-active'); // Remove padding for full-screen iframe
-                if (docFrame.src !== firstLink) {
-                  docFrame.src = firstLink;
-              }
+            if (hasMetadata) {
+              docPrimary.textContent = "No documentation link available.";
+              docSecondary.textContent = "This component doesn't have a documentation link attached.";
+            } else if (data.reason === "no-selection") {
+              docPrimary.textContent = "Select a component or instance to view documentation.";
+              docSecondary.textContent = "Documentation will display here once a component is selected.";
             } else {
-              // No URL and no links to display
-                docFrame.hidden = true;
-                docFrame.removeAttribute("src");
-                currentMetadata.hidden = true; // Hide metadata
-                currentMessage.hidden = false; // Show placeholder
-                panel.classList.remove('iframe-active'); // Restore padding
-
-                // Show "no link available" message
-                currentPrimary.textContent = "No documentation link available.";
-                currentSecondary.textContent = "This component doesn't have a documentation link attached.";
-              }
+              docPrimary.textContent = "Unable to load documentation.";
+              docSecondary.textContent = "Try selecting a different component.";
             }
           }
         }
