@@ -346,12 +346,18 @@ function extractMetadata(node, mainComponent, selectedModes) {
   }
   
   if (mainComponent) {
-    console.log("[extractMetadata] Also checking main component:", mainComponent.name);
+    console.log("[extractMetadata] Also checking main component:", mainComponent.name, "| Type:", mainComponent.type);
     console.log("[extractMetadata] Main component ID:", mainComponent.id);
     console.log("[extractMetadata] Main component has description:", "description" in mainComponent);
     if ("description" in mainComponent) {
       console.log("[extractMetadata] Main component description:", mainComponent.description);
     }
+    console.log("[extractMetadata] Main component has documentationLinks:", "documentationLinks" in mainComponent);
+    if ("documentationLinks" in mainComponent && Array.isArray(mainComponent.documentationLinks)) {
+      console.log("[extractMetadata] Main component documentationLinks length:", mainComponent.documentationLinks.length);
+    }
+  } else {
+    console.log("[extractMetadata] WARNING: No main component provided (this is normal for non-instances)");
   }
   
   var metadata = {
@@ -630,9 +636,12 @@ function extractMetadata(node, mainComponent, selectedModes) {
   }
 
   try {
-    // Extract links from both the instance and main component
+    // Extract links from instance, main component, and parent component set
+    console.log("[extractMetadata] About to extract links from node:", node.name, "type:", node.type);
     metadata.links = extractLinks(node);
+    
     if (mainComponent && mainComponent !== node) {
+      console.log("[extractMetadata] About to extract links from mainComponent:", mainComponent.name, "type:", mainComponent.type);
       var mainComponentLinks = extractLinks(mainComponent);
       // Merge links, avoiding duplicates
       for (var i = 0; i < mainComponentLinks.length; i += 1) {
@@ -640,6 +649,29 @@ function extractMetadata(node, mainComponent, selectedModes) {
           metadata.links.push(mainComponentLinks[i]);
         }
       }
+      
+      // Check if the main component is part of a component set (variant)
+      try {
+        if ("parent" in mainComponent && mainComponent.parent) {
+          console.log("[extractMetadata] Main component has parent:", mainComponent.parent.name, "type:", mainComponent.parent.type);
+          if (mainComponent.parent.type === "COMPONENT_SET") {
+            console.log("[extractMetadata] Main component is a variant, checking parent component set");
+            var componentSetLinks = extractLinks(mainComponent.parent);
+            console.log("[extractMetadata] Found", componentSetLinks.length, "links from component set");
+            for (var i = 0; i < componentSetLinks.length; i += 1) {
+              if (metadata.links.indexOf(componentSetLinks[i]) === -1) {
+                metadata.links.push(componentSetLinks[i]);
+              }
+            }
+          }
+        } else {
+          console.log("[extractMetadata] Main component has no parent (might be a standalone component or library limitation)");
+        }
+      } catch (parentError) {
+        console.log("[extractMetadata] Could not access main component parent (might be from external library):", parentError);
+      }
+    } else {
+      console.log("[extractMetadata] Not checking mainComponent. mainComponent exists?", !!mainComponent, "different from node?", mainComponent !== node);
     }
     console.log("[extractMetadata] Extracted links:", metadata.links);
   } catch (e) {
@@ -1220,34 +1252,45 @@ function resolveDocumentationFromSelection(selectedModes) {
   }
 
   var docUrl = null;
-  try {
-    if ("getPluginData" in node) {
-      var keys = [
-        "documentation",
-        "documentationUrl",
-        "docUrl",
-        "docs",
-        "url"
-      ];
+  
+  // First, check if we already extracted links in metadata
+  if (metadata && metadata.links && metadata.links.length > 0) {
+    docUrl = metadata.links[0];
+    console.log("[resolveDocumentationFromSelection] Using first link from metadata:", docUrl);
+  }
+  
+  // If no links in metadata, check plugin data as fallback
+  if (!docUrl) {
+    try {
+      if ("getPluginData" in node) {
+        var keys = [
+          "documentation",
+          "documentationUrl",
+          "docUrl",
+          "docs",
+          "url"
+        ];
 
-      for (var i = 0; i < keys.length; i += 1) {
-        var key = keys[i];
-        var value = node.getPluginData(key);
-        if (typeof value === "string") {
-          var trimmed = value.trim();
-          if (trimmed) {
-            docUrl = trimmed;
-            console.log("[resolveDocumentationFromSelection] Found doc URL:", docUrl);
-            break;
+        for (var i = 0; i < keys.length; i += 1) {
+          var key = keys[i];
+          var value = node.getPluginData(key);
+          if (typeof value === "string") {
+            var trimmed = value.trim();
+            if (trimmed) {
+              docUrl = trimmed;
+              console.log("[resolveDocumentationFromSelection] Found doc URL from plugin data:", docUrl);
+              break;
+            }
           }
         }
       }
+    } catch (e) {
+      console.log("[resolveDocumentationFromSelection] Error checking plugin data:", e);
     }
-  } catch (e) {
-    console.log("[resolveDocumentationFromSelection] Error checking plugin data:", e);
   }
 
   console.log("[resolveDocumentationFromSelection] Sending notification with metadata:", metadata !== null);
+  console.log("[resolveDocumentationFromSelection] Final docUrl:", docUrl);
   if (docUrl) {
     notifyDocumentation("success", docUrl, metadata);
   } else {
