@@ -432,6 +432,18 @@
         color: #94a3b8;
         font-family: 'SF Mono', 'Monaco', 'Courier New', monospace;
         word-break: break-all;
+        display: flex;
+        align-items: center;
+        gap: 8px;
+      }
+
+      .color-swatch {
+        width: 16px;
+        height: 16px;
+        border-radius: 4px;
+        border: 1px solid rgba(148, 163, 184, 0.3);
+        flex-shrink: 0;
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.1);
       }
 
       .doc-frame {
@@ -557,6 +569,128 @@
         line-height: 1.4;
         text-align: center;
         max-width: 180px;
+      }
+
+      /* Drill-down views */
+      .overview-subview {
+        width: 100%;
+        height: 100%;
+      }
+
+      .drill-down-header {
+        display: flex;
+        align-items: center;
+        gap: 16px;
+        margin-bottom: 24px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      }
+
+      .back-button {
+        display: flex;
+        align-items: center;
+        gap: 8px;
+        padding: 8px 16px;
+        background: rgba(11, 22, 46, 0.9);
+        border: 1px solid rgba(59, 130, 246, 0.12);
+        border-radius: 12px;
+        color: #f1f5f9;
+        font-size: 14px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .back-button:hover {
+        background: rgba(15, 28, 56, 0.95);
+        border-color: rgba(59, 130, 246, 0.3);
+        transform: translateX(-2px);
+      }
+
+      .back-button:active {
+        background: rgba(8, 20, 42, 1);
+        transform: translateX(0);
+      }
+
+      .drill-down-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: #f8fafc;
+        flex: 1;
+      }
+
+      .drill-down-list {
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
+      }
+
+      .page-item,
+      .component-item {
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        padding: 16px 20px;
+        background: rgba(11, 22, 46, 0.9);
+        border: 1px solid rgba(59, 130, 246, 0.12);
+        border-radius: 12px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+
+      .page-item:hover,
+      .component-item:hover {
+        background: rgba(15, 28, 56, 0.95);
+        border-color: rgba(59, 130, 246, 0.3);
+        transform: translateX(4px);
+      }
+
+      .page-item:active,
+      .component-item:active {
+        background: rgba(8, 20, 42, 1);
+        transform: translateX(0);
+      }
+
+      .item-info {
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        flex: 1;
+      }
+
+      .item-name {
+        font-size: 15px;
+        font-weight: 600;
+        color: #f1f5f9;
+        margin: 0;
+      }
+
+      .item-count {
+        font-size: 13px;
+        color: #cbd5f5;
+        margin: 0;
+      }
+
+      .target-icon {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        width: 32px;
+        height: 32px;
+        background: rgba(59, 130, 246, 0.15);
+        border: 1px solid rgba(59, 130, 246, 0.3);
+        border-radius: 8px;
+        color: #60a5fa;
+        font-size: 16px;
+        transition: all 0.2s ease;
+        flex-shrink: 0;
+      }
+
+      .component-item:hover .target-icon {
+        background: rgba(59, 130, 246, 0.25);
+        border-color: rgba(59, 130, 246, 0.5);
+        transform: scale(1.1);
       }
 
       .overlay {
@@ -918,40 +1052,65 @@
       </nav>
       <section class="panel" data-mode="overview">
         <div class="view" data-panel="overview">
-          <div class="grid">
-            <article class="card" data-card="components">
-              <p class="card-number" id="component-count">-</p>
-              <p class="card-label">Components</p>
-              <p class="card-description">detected in this file</p>
-            </article>
-            <article class="card" data-card="instances">
-              <p class="card-number" id="instance-count">-</p>
-              <p class="card-label">Instances</p>
-              <p class="card-description">detected in this file</p>
-            </article>
-            <article class="card" data-card="detachments">
-              <p class="card-number" id="detachment-count">-</p>
-              <p class="card-label">Detachments</p>
-              <p class="card-description">potentially detected</p>
-            </article>
-            <article class="card" id="outofdate-card" data-card="outofdate">
-              <p class="card-number" id="outofdate-count">-</p>
-              <p class="card-label">Out of date</p>
-              <p class="card-description">components out of sync</p>
-            </article>
-            <article class="card" data-card="code-missing">
-              <p class="card-number" id="codeconnect-count">-</p>
-              <p class="card-label">Code Connect</p>
-              <p class="card-description">components missing code references</p>
-            </article>
-            <article class="card" data-card="docs-missing">
-              <p class="card-number" id="docs-count">-</p>
-              <p class="card-label">Documentation</p>
-              <p class="card-description">components missing documentation</p>
-            </article>
-            <div class="grid-placeholder" id="overview-empty" hidden>
-              <p class="placeholder-title">Nothing to show yet</p>
-              <p class="placeholder-text">Once we detect components, instances, detachments, or updates in this file, they’ll appear here automatically.</p>
+          <!-- Overview Cards View -->
+          <div id="overview-cards-view" class="overview-subview">
+            <div class="grid">
+              <article class="card" data-card="components" id="components-card">
+                <p class="card-number" id="component-count">-</p>
+                <p class="card-label">Components</p>
+                <p class="card-description">detected in this file</p>
+              </article>
+              <article class="card" data-card="instances">
+                <p class="card-number" id="instance-count">-</p>
+                <p class="card-label">Instances</p>
+                <p class="card-description">detected in this file</p>
+              </article>
+              <article class="card" data-card="detachments">
+                <p class="card-number" id="detachment-count">-</p>
+                <p class="card-label">Detachments</p>
+                <p class="card-description">potentially detected</p>
+              </article>
+              <article class="card" id="outofdate-card" data-card="outofdate">
+                <p class="card-number" id="outofdate-count">-</p>
+                <p class="card-label">Out of date</p>
+                <p class="card-description">components out of sync</p>
+              </article>
+              <article class="card" data-card="code-missing">
+                <p class="card-number" id="codeconnect-count">-</p>
+                <p class="card-label">Code Connect</p>
+                <p class="card-description">components missing code references</p>
+              </article>
+              <article class="card" data-card="docs-missing">
+                <p class="card-number" id="docs-count">-</p>
+                <p class="card-label">Documentation</p>
+                <p class="card-description">components missing documentation</p>
+              </article>
+              <div class="grid-placeholder" id="overview-empty" hidden>
+                <p class="placeholder-title">Nothing to show yet</p>
+                <p class="placeholder-text">Once we detect components, instances, detachments, or updates in this file, they'll appear here automatically.</p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Pages List View (drill-down from Components card) -->
+          <div id="pages-list-view" class="overview-subview" hidden>
+            <div class="drill-down-header">
+              <button class="back-button" id="back-to-overview">← Back</button>
+              <h2 class="drill-down-title">Components by Page</h2>
+            </div>
+            <div class="drill-down-list" id="pages-list">
+              <!-- Pages will be dynamically inserted here -->
+            </div>
+          </div>
+
+          <!-- Components List View (drill-down from a specific page) -->
+          <div id="components-list-view" class="overview-subview" hidden>
+            <div class="drill-down-header">
+              <button class="back-button" id="back-to-pages">← Back</button>
+              <h2 class="drill-down-title" id="components-list-title">Components</h2>
+            </div>
+            <div class="drill-down-list" id="components-list">
+              <!-- Components will be dynamically inserted here -->
             </div>
           </div>
         </div>
@@ -1073,6 +1232,132 @@
         }
       };
       const overviewPlaceholder = document.getElementById("overview-empty");
+      
+      // Drill-down view elements
+      const overviewCardsView = document.getElementById("overview-cards-view");
+      const pagesListView = document.getElementById("pages-list-view");
+      const componentsListView = document.getElementById("components-list-view");
+      const backToOverviewBtn = document.getElementById("back-to-overview");
+      const backToPagesBtn = document.getElementById("back-to-pages");
+      const pagesList = document.getElementById("pages-list");
+      const componentsList = document.getElementById("components-list");
+      const componentsListTitle = document.getElementById("components-list-title");
+      
+      // Store components data
+      let componentsByPageData = {};
+      let currentPageName = "";
+      
+      // View state management
+      function showOverviewCards() {
+        overviewCardsView.hidden = false;
+        pagesListView.hidden = true;
+        componentsListView.hidden = true;
+      }
+      
+      function showPagesList() {
+        overviewCardsView.hidden = true;
+        pagesListView.hidden = false;
+        componentsListView.hidden = true;
+      }
+      
+      function showComponentsList(pageName) {
+        currentPageName = pageName;
+        componentsListTitle.textContent = pageName + " Components";
+        overviewCardsView.hidden = true;
+        pagesListView.hidden = true;
+        componentsListView.hidden = false;
+      }
+      
+      // Populate pages list
+      function populatePagesList() {
+        pagesList.innerHTML = "";
+        const pageNames = Object.keys(componentsByPageData);
+        
+        if (pageNames.length === 0) {
+          pagesList.innerHTML = '<p style="color: #cbd5f5; text-align: center; padding: 20px;">No pages found</p>';
+          return;
+        }
+        
+        pageNames.forEach(function(pageName) {
+          const components = componentsByPageData[pageName];
+          const count = components.length;
+          
+          const pageItem = document.createElement("div");
+          pageItem.className = "page-item";
+          pageItem.innerHTML = `
+            <div class="item-info">
+              <p class="item-name">${escapeHtml(pageName)}</p>
+              <p class="item-count">${count} component${count !== 1 ? 's' : ''}</p>
+            </div>
+          `;
+          
+          pageItem.addEventListener("click", function() {
+            populateComponentsList(pageName);
+            showComponentsList(pageName);
+          });
+          
+          pagesList.appendChild(pageItem);
+        });
+      }
+      
+      // Populate components list for a specific page
+      function populateComponentsList(pageName) {
+        componentsList.innerHTML = "";
+        const components = componentsByPageData[pageName] || [];
+        
+        if (components.length === 0) {
+          componentsList.innerHTML = '<p style="color: #cbd5f5; text-align: center; padding: 20px;">No components found on this page</p>';
+          return;
+        }
+        
+        components.forEach(function(component) {
+          const componentItem = document.createElement("div");
+          componentItem.className = "component-item";
+          componentItem.innerHTML = `
+            <div class="item-info">
+              <p class="item-name">${escapeHtml(component.name)}</p>
+            </div>
+            <div class="target-icon" title="Navigate to component">🎯</div>
+          `;
+          
+          componentItem.addEventListener("click", function() {
+            parent.postMessage(
+              { 
+                pluginMessage: { 
+                  type: "navigate-to-component",
+                  componentId: component.id
+                } 
+              },
+              "*"
+            );
+          });
+          
+          componentsList.appendChild(componentItem);
+        });
+      }
+      
+      // Escape HTML to prevent XSS
+      function escapeHtml(text) {
+        var div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+      }
+      
+      // Back button handlers
+      backToOverviewBtn.addEventListener("click", showOverviewCards);
+      backToPagesBtn.addEventListener("click", showPagesList);
+      
+      // Components card click handler
+      const componentsCard = document.getElementById("components-card");
+      if (componentsCard) {
+        componentsCard.addEventListener("click", function() {
+          const count = parseInt(overviewCards.components.number.textContent, 10);
+          if (count > 0 && !isNaN(count)) {
+            populatePagesList();
+            showPagesList();
+          }
+        });
+      }
       
       // Get elements for both inspect and documentation tabs
       const inspectView = document.querySelector('.view[data-panel="inspect"]');
@@ -1439,8 +1724,9 @@
         
         addItem("Type", formattedType);
         
-        // Add Code Connect status
-        if (metadata.codeConnect !== undefined) {
+        // Add Code Connect status (only for components and instances)
+        if (metadata.codeConnect !== undefined && 
+            (metadata.type === "COMPONENT" || metadata.type === "INSTANCE" || metadata.type === "COMPONENT_SET")) {
           addItem("Code Connect", metadata.codeConnect ? "Yes" : "No");
         }
         
@@ -1460,7 +1746,8 @@
             var displayName = isInspect ? formatTokenName(colorVar.name, selectedPlatform) : colorVar.name;
             html += '<div class="variable-name">' + escapeHtml(displayName) + '</div>';
             if (colorVar.value) {
-              html += '<div class="variable-value">' + escapeHtml(colorVar.value) + '</div>';
+              var hexValue = rgbToHex(colorVar.value);
+              html += '<div class="variable-value">' + createColorSwatch(hexValue) + escapeHtml(hexValue) + '</div>';
             }
             html += '</div>';
             html += '</div>';
@@ -1480,7 +1767,8 @@
             html += '<div class="variable-detail">';
             var displayName = isInspect ? formatTokenName(typoVar.name, selectedPlatform) : typoVar.name;
             html += '<div class="variable-name">' + escapeHtml(displayName) + '</div>';
-            if (typoVar.value) {
+            // Only show value if it exists and is not empty
+            if (typoVar.value && typoVar.value.trim()) {
               html += '<div class="variable-value">' + escapeHtml(typoVar.value) + '</div>';
             }
             html += '</div>';
@@ -1531,10 +1819,7 @@
           html += '</div>';
         }
         
-        // Only show styles if no variables are being used
-        if (!hasAnyVariables && metadata.styles && metadata.styles.length > 0) {
-          addItem("Styles", metadata.styles);
-        }
+        // Styles section removed - information is already shown in organized variable sections
         // Add documentation links with enhanced styling (only for Documentation tab)
         if (!isInspect && metadata.links && metadata.links.length > 0) {
           html += '<div class="metadata-item">';
@@ -1573,6 +1858,37 @@
         return div.innerHTML;
       }
 
+      // Convert rgb/rgba string to hex
+      function rgbToHex(rgbString) {
+        if (!rgbString) return rgbString;
+        
+        // Check if already hex
+        if (rgbString.startsWith('#')) {
+          return rgbString.toUpperCase();
+        }
+        
+        // Match rgb() or rgba() pattern
+        var match = rgbString.match(/rgba?\((\d+),\s*(\d+),\s*(\d+)(?:,\s*[\d.]+)?\)/);
+        if (!match) return rgbString;
+        
+        var r = parseInt(match[1]);
+        var g = parseInt(match[2]);
+        var b = parseInt(match[3]);
+        
+        var hex = "#" + 
+          ("0" + r.toString(16)).slice(-2) + 
+          ("0" + g.toString(16)).slice(-2) + 
+          ("0" + b.toString(16)).slice(-2);
+        
+        return hex.toUpperCase();
+      }
+
+      // Create color swatch HTML
+      function createColorSwatch(hexColor) {
+        if (!hexColor || !hexColor.startsWith('#')) return '';
+        return '<span class="color-swatch" style="background-color: ' + hexColor + ';"></span>';
+      }
+
       function setActiveTab(targetId) {
         console.log("[setActiveTab] Switching to tab:", targetId);
         tabs.forEach((tab) => {
@@ -1597,6 +1913,7 @@
         // Trigger component scan when switching to overview tab
         if (targetId === "overview") {
           console.log("[setActiveTab] Overview tab activated, requesting component scan");
+          showOverviewCards(); // Reset to cards view
           setCardsLoading(["components", "instances", "detachments", "outOfDate", "codeMissing", "docsMissing"]);
           parent.postMessage(
             { pluginMessage: { type: "scan-components" } },
@@ -1741,6 +2058,12 @@
         
         if (message && message.type === "overview-stats") {
           console.log("[window.onmessage] Overview stats received:", message);
+          
+          // Store components by page data for drill-down
+          if (message.componentsByPage) {
+            componentsByPageData = message.componentsByPage;
+            console.log("[window.onmessage] Components by page data stored:", Object.keys(componentsByPageData).length, "pages");
+          }
           
           updateCardState("components", message.componentCount);
           updateCardState("instances", message.totalInstanceCount);

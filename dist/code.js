@@ -17,6 +17,19 @@ function extractStyles(node) {
   console.log("[extractStyles] Has effects property:", "effects" in node);
 
   try {
+    // Check for fill style first
+    if ("fillStyleId" in node && node.fillStyleId && node.fillStyleId !== "") {
+      try {
+        var fillStyle = figma.getStyleById(node.fillStyleId);
+        if (fillStyle) {
+          console.log("[extractStyles] Found fill style:", fillStyle.name);
+          styles.push("Fill Style: " + fillStyle.name);
+        }
+      } catch (styleError) {
+        console.log("[extractStyles] Error getting fill style:", styleError);
+      }
+    }
+    
     // Check fills - need to check if fills are visible
     if ("fills" in node) {
       console.log("[extractStyles] Checking fills, type:", typeof node.fills);
@@ -56,6 +69,19 @@ function extractStyles(node) {
   }
 
   try {
+    // Check for stroke style first
+    if ("strokeStyleId" in node && node.strokeStyleId && node.strokeStyleId !== "") {
+      try {
+        var strokeStyle = figma.getStyleById(node.strokeStyleId);
+        if (strokeStyle) {
+          console.log("[extractStyles] Found stroke style:", strokeStyle.name);
+          styles.push("Stroke Style: " + strokeStyle.name);
+        }
+      } catch (styleError) {
+        console.log("[extractStyles] Error getting stroke style:", styleError);
+      }
+    }
+    
     // Check strokes
     if ("strokes" in node) {
       console.log("[extractStyles] Checking strokes, type:", typeof node.strokes);
@@ -113,6 +139,19 @@ function extractStyles(node) {
   }
 
   try {
+    // Check for text style first
+    if (node.type === "TEXT" && "textStyleId" in node && node.textStyleId) {
+      try {
+        var textStyle = figma.getStyleById(node.textStyleId);
+        if (textStyle) {
+          console.log("[extractStyles] Found text style:", textStyle.name);
+          styles.push("Text Style: " + textStyle.name);
+        }
+      } catch (styleError) {
+        console.log("[extractStyles] Error getting text style:", styleError);
+      }
+    }
+    
     // Check font
     if ("fontName" in node) {
       var fontName = node.fontName;
@@ -468,6 +507,83 @@ function extractMetadata(node, mainComponent, selectedModes) {
     metadata.styles = extractStyles(node);
     console.log("[extractMetadata] Extracted styles from node:", metadata.styles);
     
+    // Helper to build typography preview string (font size / line height)
+    function getTypographyPreview(textNode) {
+      var sizePart = "";
+      var linePart = "";
+      
+      try {
+        if ("fontSize" in textNode && textNode.fontSize !== figma.mixed && typeof textNode.fontSize === "number") {
+          sizePart = textNode.fontSize + "px";
+        }
+      } catch (e) {
+        console.log("[extractMetadata] Error reading fontSize from text node:", e);
+      }
+      
+      try {
+        if ("lineHeight" in textNode && textNode.lineHeight !== figma.mixed && textNode.lineHeight !== undefined) {
+          var lh = textNode.lineHeight;
+          if (typeof lh === "number") {
+            linePart = lh + "px";
+          } else if (typeof lh === "object" && lh !== null) {
+            if (lh.unit === "PIXELS" && typeof lh.value === "number") {
+              linePart = lh.value + "px";
+            } else if ((lh.unit === "PERCENT" || lh.unit === "FONT_SIZE") && typeof lh.value === "number") {
+              linePart = lh.value + "%";
+            }
+          } else if (lh === "AUTO") {
+            linePart = "Auto";
+          }
+        }
+      } catch (e) {
+        console.log("[extractMetadata] Error reading lineHeight from text node:", e);
+      }
+      
+      if (sizePart && linePart) {
+        return sizePart + " / " + linePart;
+      }
+      return sizePart || linePart || "";
+    }
+    
+    // Recursive function to extract text styles from node and all descendants
+    function extractTextStylesRecursive(targetNode) {
+      // Check the node itself for text style
+      if (targetNode.type === "TEXT" && "textStyleId" in targetNode && targetNode.textStyleId) {
+        try {
+          var textStyle = figma.getStyleById(targetNode.textStyleId);
+          if (textStyle) {
+            console.log("[extractMetadata] Found text style:", textStyle.name, "on", targetNode.name);
+            var preview = getTypographyPreview(targetNode);
+            // Check if already added with same name and preview
+            var alreadyAdded = false;
+            for (var t = 0; t < metadata.typographyVariables.length; t += 1) {
+              if (metadata.typographyVariables[t].name === textStyle.name &&
+                  metadata.typographyVariables[t].value === preview) {
+                alreadyAdded = true;
+                break;
+              }
+            }
+            if (!alreadyAdded) {
+              metadata.typographyVariables.push({
+                property: "Text Style",
+                name: textStyle.name,
+                value: preview
+              });
+            }
+          }
+        } catch (styleError) {
+          console.log("[extractMetadata] Error getting text style:", styleError);
+        }
+      }
+      
+      // Recursively check children
+      if ("children" in targetNode && targetNode.children && targetNode.children.length > 0) {
+        for (var i = 0; i < targetNode.children.length; i += 1) {
+          extractTextStylesRecursive(targetNode.children[i]);
+        }
+      }
+    }
+    
     // Also check children if the node is a container
     if ("children" in node && node.children && node.children.length > 0) {
       console.log("[extractMetadata] Node has children, checking them too. Count:", node.children.length);
@@ -485,6 +601,13 @@ function extractMetadata(node, mainComponent, selectedModes) {
           }
         }
       }
+      
+      // Extract text styles from all descendants
+      console.log("[extractMetadata] Extracting text styles recursively...");
+      extractTextStylesRecursive(node);
+    } else if (node.type === "TEXT") {
+      // If it's a text node without children, still check it
+      extractTextStylesRecursive(node);
     }
     
     // Also store RGB values for variable matching
@@ -1149,6 +1272,20 @@ figma.ui.onmessage = function (message) {
   } else if (message.type === "scan-components") {
     console.log("[figma.ui.onmessage] Handling scan-components");
     scanFileForComponents();
+  } else if (message.type === "navigate-to-component") {
+    console.log("[figma.ui.onmessage] Handling navigate-to-component");
+    var componentId = message.componentId;
+    if (componentId) {
+      var node = figma.getNodeById(componentId);
+      if (node) {
+        figma.currentPage = node.parent && node.parent.type === "PAGE" ? node.parent : figma.currentPage;
+        figma.viewport.scrollAndZoomIntoView([node]);
+        figma.currentPage.selection = [node];
+        console.log("[figma.ui.onmessage] Navigated to component:", node.name);
+      } else {
+        console.log("[figma.ui.onmessage] Component not found with ID:", componentId);
+      }
+    }
   } else {
     console.log("[figma.ui.onmessage] Unknown message type:", message.type);
   }
@@ -1210,6 +1347,7 @@ function scanFileForComponents() {
   var componentUsageMap = {}; // Map of component names actually used via instances
   var suspiciousFrames = []; // Frames/groups that might be detached instances
   var trackedComponents = {}; // Map of component metadata for stats
+  var componentsByPage = {}; // Map of page name -> array of components
   
   function recordComponentInfo(componentNode) {
     if (!componentNode || !componentNode.id) {
@@ -1225,14 +1363,29 @@ function scanFileForComponents() {
     };
   }
   
-  function traverseNode(node, parentType, isInsideInstance) {
+  function traverseNode(node, parentType, isInsideInstance, currentPage) {
     // Count COMPONENT_SET as one unique component (variant group)
     if (node.type === "COMPONENT_SET") {
       componentSetIds[node.id] = {
         id: node.id,
-        name: node.name
+        name: node.name,
+        pageName: currentPage ? currentPage.name : "Unknown Page",
+        pageId: currentPage ? currentPage.id : null
       };
       componentNameMap[node.name] = node.id;
+      
+      // Add to componentsByPage
+      if (currentPage) {
+        if (!componentsByPage[currentPage.name]) {
+          componentsByPage[currentPage.name] = [];
+        }
+        componentsByPage[currentPage.name].push({
+          id: node.id,
+          name: node.name,
+          type: "COMPONENT_SET"
+        });
+      }
+      
       console.log("[scanFileForComponents] Found component set (variants):", node.name);
     }
     
@@ -1240,9 +1393,24 @@ function scanFileForComponents() {
     if (node.type === "COMPONENT" && parentType !== "COMPONENT_SET") {
       standaloneComponentIds[node.id] = {
         id: node.id,
-        name: node.name
+        name: node.name,
+        pageName: currentPage ? currentPage.name : "Unknown Page",
+        pageId: currentPage ? currentPage.id : null
       };
       componentNameMap[node.name] = node.id;
+      
+      // Add to componentsByPage
+      if (currentPage) {
+        if (!componentsByPage[currentPage.name]) {
+          componentsByPage[currentPage.name] = [];
+        }
+        componentsByPage[currentPage.name].push({
+          id: node.id,
+          name: node.name,
+          type: "COMPONENT"
+        });
+      }
+      
       console.log("[scanFileForComponents] Found standalone component:", node.name);
       recordComponentInfo(node);
     }
@@ -1305,7 +1473,7 @@ function scanFileForComponents() {
       var childIsInsideInstance = isInsideInstance || node.type === "INSTANCE" || isLikelyDetached;
       
       for (var i = 0; i < node.children.length; i++) {
-        traverseNode(node.children[i], node.type, childIsInsideInstance);
+        traverseNode(node.children[i], node.type, childIsInsideInstance, currentPage);
       }
     }
   }
@@ -1314,7 +1482,7 @@ function scanFileForComponents() {
   var pages = figma.root.children;
   for (var i = 0; i < pages.length; i++) {
     console.log("[scanFileForComponents] Scanning page:", pages[i].name);
-    traverseNode(pages[i], null, false);
+    traverseNode(pages[i], null, false, pages[i]);
   }
   
   // Check for detachments
@@ -1399,7 +1567,8 @@ function scanFileForComponents() {
     detachmentCount: detachmentCount,
     componentsWithoutDocs: componentsWithoutDocs,
     componentsWithoutCode: componentsWithoutCode,
-    outOfDateCount: null
+    outOfDateCount: null,
+    componentsByPage: componentsByPage
   });
   
   // Check for out of date components (async operation)
@@ -1410,7 +1579,8 @@ function scanFileForComponents() {
     totalInstanceCount,
     detachmentCount,
     componentsWithoutDocs,
-    componentsWithoutCode
+    componentsWithoutCode,
+    componentsByPage
   );
 }
 
@@ -1420,7 +1590,8 @@ async function checkForOutOfDateComponents(
   totalInstanceCount,
   detachmentCount,
   componentsWithoutDocs,
-  componentsWithoutCode
+  componentsWithoutCode,
+  componentsByPage
 ) {
   console.log("[checkForOutOfDateComponents] Starting async check...");
   var uniqueComponents = {};
@@ -1506,7 +1677,8 @@ async function checkForOutOfDateComponents(
     detachmentCount: detachmentCount,
     componentsWithoutDocs: componentsWithoutDocs,
     componentsWithoutCode: componentsWithoutCode,
-    outOfDateCount: outOfDateCount
+    outOfDateCount: outOfDateCount,
+    componentsByPage: componentsByPage
   });
 }
 
