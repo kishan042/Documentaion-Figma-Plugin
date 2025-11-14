@@ -38,12 +38,13 @@
       }
 
       .tabs {
-        display: inline-flex;
+        display: flex;
         gap: 8px;
         background: rgba(15, 23, 42, 0.55);
         border-radius: 999px;
         padding: 4px;
-        width: fit-content;
+        width: 100%;
+        justify-content: space-between;
       }
 
       .tab {
@@ -57,6 +58,7 @@
         border-radius: 999px;
         cursor: pointer;
         transition: background 0.2s, color 0.2s;
+        text-align: center;
       }
 
       .tab.active {
@@ -89,6 +91,23 @@
         background: rgba(15, 23, 42, 0.4);
       }
 
+      .panel[data-mode="documentation"].iframe-active {
+        padding: 0;
+        gap: 0;
+        position: relative;
+        border: none;
+      }
+
+      .panel[data-mode="documentation"].iframe-active .view {
+        gap: 0;
+        padding: 0;
+      }
+
+      .panel[data-mode="documentation"].iframe-active .view[data-panel="documentation"] {
+        display: flex;
+        flex: 1;
+      }
+
       .view {
         flex: 1;
         min-height: 0;
@@ -98,6 +117,105 @@
 
       .view[data-state="hidden"] {
         display: none;
+      }
+
+      .view-controls {
+        display: flex;
+        gap: 12px;
+        margin-bottom: 16px;
+        padding-bottom: 16px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.1);
+      }
+
+      .view-controls:has(.control-group:not(.hidden)) {
+        display: flex;
+      }
+
+      .view-controls:not(:has(.control-group:not(.hidden))) {
+        display: none;
+      }
+
+      .control-group {
+        flex: 1;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .control-group.hidden {
+        display: none;
+      }
+
+      .control-label {
+        font-size: 11px;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 2px;
+      }
+
+      .control-select {
+        width: 100%;
+        padding: 12px 12px;
+        background-color: rgba(15, 23, 42, 0.8);
+        background-image: url("data:image/svg+xml,%3Csvg width='12' height='8' viewBox='0 0 12 8' fill='none' xmlns='http://www.w3.org/2000/svg'%3E%3Cpath d='M1 1.5L6 6.5L11 1.5' stroke='%2394a3b8' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E");
+        background-repeat: no-repeat;
+        background-position: right 12px center;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 10px;
+        color: #f1f5f9;
+        font-size: 13px;
+        font-weight: 500;
+        cursor: pointer;
+        transition: all 0.2s;
+        appearance: none;
+        padding-right: 36px;
+        height: 44px;
+      }
+
+      .control-select:hover {
+        background-color: rgba(15, 23, 42, 0.95);
+        border-color: rgba(148, 163, 184, 0.3);
+      }
+
+      .control-select:focus {
+        outline: none;
+        border-color: rgba(59, 130, 246, 0.5);
+        box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+      }
+
+      .control-select option {
+        background: #1e293b;
+        color: #f1f5f9;
+        padding: 8px;
+      }
+
+      .control-button {
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        padding: 10px 16px;
+        background: rgba(15, 23, 42, 0.8);
+        border: 1px solid rgba(148, 163, 184, 0.2);
+        border-radius: 10px;
+        color: #f1f5f9;
+        font-size: 18px;
+        cursor: pointer;
+        transition: all 0.2s;
+        min-width: 44px;
+        height: 44px;
+        box-sizing: border-box;
+      }
+
+      .control-button:hover {
+        background: rgba(15, 23, 42, 0.95);
+        border-color: rgba(148, 163, 184, 0.3);
+        transform: scale(1.05);
+      }
+
+      .control-button:active {
+        transform: scale(0.95);
       }
 
       .doc-message {
@@ -125,8 +243,8 @@
       }
 
       .doc-metadata {
-        flex: 0 0 auto;
-        max-height: 300px;
+        flex: 1;
+        min-height: 0;
         display: flex;
         flex-direction: column;
         overflow-y: auto;
@@ -174,21 +292,26 @@
       }
 
       .metadata-section {
-        background: rgba(15, 23, 42, 0.5);
-        border-radius: 12px;
-        padding: 16px;
-        margin: 8px 0;
+        padding: 20px 0;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+      }
+
+      .metadata-section:first-of-type {
+        padding-top: 12px;
+      }
+
+      .metadata-section:last-child {
+        border-bottom: none;
+        padding-bottom: 0;
       }
 
       .metadata-section-title {
-        font-weight: 700;
-        color: #f1f5f9;
+        font-weight: 600;
+        color: #94a3b8;
         margin-bottom: 12px;
-        font-size: 13px;
+        font-size: 12px;
         text-transform: uppercase;
-        letter-spacing: 0.08em;
-        padding-bottom: 8px;
-        border-bottom: 2px solid rgba(59, 130, 246, 0.3);
+        letter-spacing: 0.05em;
       }
 
       .metadata-value {
@@ -314,58 +437,449 @@
       .doc-frame {
         flex: 1;
         width: 100%;
+        height: 100%;
         border: 0;
-        border-radius: 16px;
+        border-radius: 18px;
         background: rgba(2, 6, 23, 0.55);
+      }
+
+      .panel[data-mode="documentation"].iframe-active .doc-frame {
+        border-radius: 0;
+        position: absolute;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
       }
 
       .grid {
         display: grid;
         grid-template-columns: repeat(2, minmax(0, 1fr));
-        gap: 16px;
+        gap: 24px;
+      }
+      
+      .card[hidden] {
+        display: none;
+      }
+      
+      .grid-placeholder {
+        grid-column: 1 / -1;
+        padding: 32px 24px;
+        text-align: center;
+        background: rgba(15, 23, 42, 0.6);
+        border: 1px dashed rgba(148, 163, 184, 0.35);
+        border-radius: 18px;
+        color: #cbd5f5;
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+        align-items: center;
+        justify-content: center;
+        min-height: 140px;
+      }
+      
+      .grid-placeholder[hidden] {
+        display: none;
+      }
+      
+      .placeholder-title {
+        margin: 0;
+        font-size: 16px;
+        font-weight: 600;
+        color: #f1f5f9;
+      }
+      
+      .placeholder-text {
+        margin: 0;
+        font-size: 13px;
+        color: #cbd5f5;
+        line-height: 1.5;
+        max-width: 280px;
       }
 
       .card {
         display: flex;
         flex-direction: column;
-        gap: 8px;
-        padding: 16px;
+        align-items: center;
+        justify-content: center;
+        gap: 12px;
+        padding: 20px 16px;
         background: rgba(11, 22, 46, 0.9);
         border-radius: 18px;
         border: 1px solid rgba(59, 130, 246, 0.12);
         box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.08);
+        min-height: 140px;
+        cursor: pointer;
+        transition: all 0.2s ease;
+      }
+      
+      .card.card--full {
+        grid-column: 1 / -1;
       }
 
-      .card h3 {
+      .card:hover {
+        background: rgba(15, 28, 56, 0.95);
+        border-color: rgba(59, 130, 246, 0.3);
+        box-shadow: inset 0 1px 0 rgba(148, 163, 184, 0.12), 0 4px 16px rgba(59, 130, 246, 0.15);
+        transform: translateY(-2px);
+      }
+
+      .card:active {
+        background: rgba(8, 20, 42, 1);
+        border-color: rgba(59, 130, 246, 0.4);
+        box-shadow: inset 0 2px 4px rgba(0, 0, 0, 0.3);
+        transform: translateY(0);
+      }
+
+      .card-number {
         margin: 0;
-        font-size: 14px;
+        font-size: 36px;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1;
+        text-shadow: 0 2px 8px rgba(96, 165, 250, 0.25);
+      }
+
+      .card-label {
+        margin: 0;
+        font-size: 16px;
         font-weight: 600;
         color: #f1f5f9;
+        line-height: 1.2;
+        letter-spacing: 0.01em;
       }
 
-      .card p {
+      .card-description {
         margin: 0;
         font-size: 12px;
+        font-weight: 400;
+        color: #cbd5f5;
         line-height: 1.4;
+        text-align: center;
+        max-width: 180px;
+      }
+
+      .overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 32px;
+      }
+
+      .overlay.active {
+        display: flex;
+      }
+
+      .overlay-content {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+        border-radius: 24px;
+        padding: 32px;
+        max-width: 360px;
+        width: 100%;
+        border: 2px solid rgba(59, 130, 246, 0.3);
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(148, 163, 184, 0.15);
+      }
+
+      .overlay-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 24px;
+      }
+
+      .overlay-icon {
+        font-size: 32px;
+        line-height: 1;
+      }
+
+      .overlay-title {
+        margin: 0;
+        font-size: 24px;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.2;
+      }
+
+      .overlay-body {
+        margin-bottom: 24px;
+      }
+
+      .overlay-text {
+        margin: 0 0 16px 0;
+        font-size: 14px;
+        line-height: 1.6;
         color: #cbd5f5;
       }
 
-      .card button {
-        margin-top: auto;
-        border: 0;
-        border-radius: 10px;
-        padding: 8px 0;
-        font-size: 12px;
-        font-weight: 600;
-        color: #0b1220;
-        background: #38bdf8;
-        cursor: pointer;
-        transition: background 0.2s, transform 0.2s;
+      .overlay-steps {
+        list-style: none;
+        padding: 0;
+        margin: 0;
+        display: flex;
+        flex-direction: column;
+        gap: 12px;
       }
 
-      .card button:hover {
-        background: #0ea5e9;
-        transform: translateY(-1px);
+      .overlay-step {
+        display: flex;
+        align-items: flex-start;
+        gap: 12px;
+        padding: 12px;
+        background: rgba(11, 22, 46, 0.6);
+        border-radius: 12px;
+        border: 1px solid rgba(59, 130, 246, 0.15);
+      }
+
+      .overlay-step-number {
+        flex-shrink: 0;
+        width: 24px;
+        height: 24px;
+        border-radius: 50%;
+        background: #1d4ed8;
+        color: #f8fafc;
+        font-size: 13px;
+        font-weight: 700;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        line-height: 1;
+      }
+
+      .overlay-step-text {
+        margin: 0;
+        font-size: 13px;
+        line-height: 1.5;
+        color: #e2e8f0;
+        padding-top: 2px;
+      }
+
+      .overlay-footer {
+        display: flex;
+        gap: 12px;
+      }
+
+      .overlay-button {
+        flex: 1;
+        border: 0;
+        border-radius: 12px;
+        padding: 14px 20px;
+        font-size: 14px;
+        font-weight: 600;
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .overlay-button-primary {
+        background: linear-gradient(135deg, #2563eb 0%, #1d4ed8 100%);
+        color: #f8fafc;
+        box-shadow: 0 4px 12px rgba(37, 99, 235, 0.4);
+      }
+
+      .overlay-button-primary:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 6px 16px rgba(37, 99, 235, 0.5);
+      }
+
+      .overlay-button-primary:active {
+        transform: translateY(0);
+      }
+
+      .overlay-button-secondary {
+        background: rgba(51, 65, 85, 0.8);
+        color: #cbd5f5;
+        border: 1px solid rgba(148, 163, 184, 0.2);
+      }
+
+      .overlay-button-secondary:hover {
+        background: rgba(71, 85, 105, 0.9);
+        border-color: rgba(148, 163, 184, 0.3);
+      }
+
+      /* Mode Settings Modal */
+      .mode-settings-overlay {
+        position: fixed;
+        top: 0;
+        left: 0;
+        width: 100%;
+        height: 100%;
+        background: rgba(0, 0, 0, 0.85);
+        backdrop-filter: blur(8px);
+        display: none;
+        align-items: center;
+        justify-content: center;
+        z-index: 1000;
+        padding: 32px;
+      }
+
+      .mode-settings-overlay.active {
+        display: flex;
+      }
+
+      .mode-settings-content {
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+        border-radius: 24px;
+        max-width: 400px;
+        width: 100%;
+        max-height: calc(100vh - 64px);
+        display: flex;
+        flex-direction: column;
+        border: 2px solid rgba(59, 130, 246, 0.3);
+        box-shadow: 0 24px 48px rgba(0, 0, 0, 0.5), inset 0 1px 0 rgba(148, 163, 184, 0.15);
+        overflow: hidden;
+      }
+
+      .mode-settings-header {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 32px 32px 16px 32px;
+        border-bottom: 1px solid rgba(148, 163, 184, 0.15);
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+        border-radius: 24px 24px 0 0;
+        position: sticky;
+        top: 0;
+        z-index: 10;
+        flex-shrink: 0;
+      }
+
+      .mode-settings-icon {
+        font-size: 24px;
+        line-height: 1;
+      }
+
+      .mode-settings-title {
+        margin: 0;
+        font-size: 20px;
+        font-weight: 700;
+        color: #f8fafc;
+        line-height: 1.2;
+      }
+
+      .mode-settings-body {
+        flex: 1;
+        overflow-y: auto;
+        padding: 24px 32px;
+        min-height: 0;
+      }
+
+      .mode-settings-body::-webkit-scrollbar {
+        width: 12px;
+      }
+
+      .mode-settings-body::-webkit-scrollbar-track {
+        background: rgba(15, 23, 42, 0.4);
+        border-radius: 6px;
+        margin: 8px 0;
+      }
+
+      .mode-settings-body::-webkit-scrollbar-thumb {
+        background: rgba(59, 130, 246, 0.3);
+        border-radius: 6px;
+        border: 2px solid rgba(15, 23, 42, 0.4);
+      }
+
+      .mode-settings-body::-webkit-scrollbar-thumb:hover {
+        background: rgba(59, 130, 246, 0.5);
+      }
+
+      .mode-collection {
+        margin-bottom: 24px;
+      }
+
+      .mode-collection:last-child {
+        margin-bottom: 0;
+      }
+
+      .mode-collection-title {
+        font-size: 13px;
+        font-weight: 600;
+        color: #94a3b8;
+        text-transform: uppercase;
+        letter-spacing: 0.05em;
+        margin-bottom: 12px;
+      }
+
+      .mode-options {
+        display: flex;
+        flex-direction: column;
+        gap: 8px;
+      }
+
+      .mode-option {
+        display: flex;
+        align-items: center;
+        gap: 12px;
+        padding: 12px;
+        background: rgba(11, 22, 46, 0.6);
+        border-radius: 10px;
+        border: 1px solid rgba(59, 130, 246, 0.15);
+        cursor: pointer;
+        transition: all 0.2s;
+      }
+
+      .mode-option:hover {
+        background: rgba(15, 28, 56, 0.8);
+        border-color: rgba(59, 130, 246, 0.3);
+      }
+
+      .mode-option.selected {
+        background: rgba(29, 78, 216, 0.2);
+        border-color: rgba(59, 130, 246, 0.5);
+      }
+
+      .mode-radio {
+        width: 20px;
+        height: 20px;
+        border-radius: 50%;
+        border: 2px solid rgba(148, 163, 184, 0.4);
+        position: relative;
+        flex-shrink: 0;
+        transition: all 0.2s;
+      }
+
+      .mode-option.selected .mode-radio {
+        border-color: #3b82f6;
+        background: #3b82f6;
+      }
+
+      .mode-option.selected .mode-radio::after {
+        content: '';
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        transform: translate(-50%, -50%);
+        width: 8px;
+        height: 8px;
+        border-radius: 50%;
+        background: #fff;
+      }
+
+      .mode-label {
+        margin: 0;
+        font-size: 14px;
+        color: #e2e8f0;
+        font-weight: 500;
+      }
+
+      .mode-settings-footer {
+        display: flex;
+        gap: 12px;
+        padding: 24px 32px 32px 32px;
+        border-top: 1px solid rgba(148, 163, 184, 0.15);
+        background: linear-gradient(135deg, rgba(15, 23, 42, 0.95) 0%, rgba(30, 41, 59, 0.95) 100%);
+        border-radius: 0 0 24px 24px;
+        position: sticky;
+        bottom: 0;
+        z-index: 10;
+        flex-shrink: 0;
       }
 
       .rescan {
@@ -405,35 +919,62 @@
       <section class="panel" data-mode="overview">
         <div class="view" data-panel="overview">
           <div class="grid">
-            <article class="card">
-              <h3>Components</h3>
-              <p>32 connected components detected in this file.</p>
-              <button type="button">View details</button>
+            <article class="card" data-card="components">
+              <p class="card-number" id="component-count">-</p>
+              <p class="card-label">Components</p>
+              <p class="card-description">detected in this file</p>
             </article>
-            <article class="card">
-              <h3>Instances</h3>
-              <p>127 unique instances currently in sync.</p>
-              <button type="button">Review instances</button>
+            <article class="card" data-card="instances">
+              <p class="card-number" id="instance-count">-</p>
+              <p class="card-label">Instances</p>
+              <p class="card-description">detected in this file</p>
             </article>
-            <article class="card">
-              <h3>Detachments</h3>
-              <p>5 potential detachments require attention.</p>
-              <button type="button">See matches</button>
+            <article class="card" data-card="detachments">
+              <p class="card-number" id="detachment-count">-</p>
+              <p class="card-label">Detachments</p>
+              <p class="card-description">potentially detected</p>
             </article>
-            <article class="card">
-              <h3>Updates</h3>
-              <p>8 components have newer versions available.</p>
-              <button type="button">Apply updates</button>
+            <article class="card" id="outofdate-card" data-card="outofdate">
+              <p class="card-number" id="outofdate-count">-</p>
+              <p class="card-label">Out of date</p>
+              <p class="card-description">components out of sync</p>
             </article>
+            <article class="card" data-card="code-missing">
+              <p class="card-number" id="codeconnect-count">-</p>
+              <p class="card-label">Code Connect</p>
+              <p class="card-description">components missing code references</p>
+            </article>
+            <article class="card" data-card="docs-missing">
+              <p class="card-number" id="docs-count">-</p>
+              <p class="card-label">Documentation</p>
+              <p class="card-description">components missing documentation</p>
+            </article>
+            <div class="grid-placeholder" id="overview-empty" hidden>
+              <p class="placeholder-title">Nothing to show yet</p>
+              <p class="placeholder-text">Once we detect components, instances, detachments, or updates in this file, they’ll appear here automatically.</p>
+            </div>
           </div>
         </div>
         <div class="view" data-panel="inspect" data-state="hidden">
+          <div class="view-controls">
+            <div class="control-group hidden" id="platform-control">
+              <label class="control-label" for="platform-select">Platform</label>
+              <select class="control-select" id="platform-select">
+                <option value="web">Web</option>
+                <option value="ios">iOS</option>
+                <option value="android">Android</option>
+              </select>
+            </div>
+            <div class="control-group hidden" id="collections-control" style="flex: 0 0 auto;">
+              <label class="control-label">Collections</label>
+              <button class="control-button" id="mode-settings-button" title="Configure collections">⚙️</button>
+            </div>
+          </div>
           <div class="doc-message">
-            <strong data-doc-primary>Select a component or instance to display the correct documentation.</strong>
-            <span data-doc-secondary>The documentation link will load inside this panel once a component with attached docs is selected.</span>
+            <strong data-doc-primary>Select a component or instance to display the correct information.</strong>
+            <span data-doc-secondary>Component details will display here once a component or instance is selected.</span>
           </div>
           <div class="doc-metadata" hidden></div>
-          <iframe class="doc-frame" title="Component documentation" hidden sandbox="allow-same-origin allow-scripts"></iframe>
         </div>
         <div class="view" data-panel="documentation" data-state="hidden">
           <div class="doc-message">
@@ -446,12 +987,92 @@
         <button class="rescan" type="button">Rescan</button>
       </section>
     </div>
+    
+    <!-- Library Updates Overlay -->
+    <div class="overlay" id="library-overlay">
+      <div class="overlay-content">
+        <div class="overlay-header">
+          <span class="overlay-icon">📚</span>
+          <h2 class="overlay-title">Check for Updates</h2>
+        </div>
+        <div class="overlay-body">
+          <p class="overlay-text">Follow these steps to check for component, style, and variable updates:</p>
+          <ol class="overlay-steps">
+            <li class="overlay-step">
+              <div class="overlay-step-number">1</div>
+              <p class="overlay-step-text">Open the <strong>Assets panel</strong> on the left sidebar</p>
+            </li>
+            <li class="overlay-step">
+              <div class="overlay-step-number">2</div>
+              <p class="overlay-step-text">Click the <strong>Libraries icon</strong> (book icon) at the top</p>
+            </li>
+            <li class="overlay-step">
+              <div class="overlay-step-number">3</div>
+              <p class="overlay-step-text">Select the <strong>Updates tab</strong> to view available updates</p>
+            </li>
+            <li class="overlay-step">
+              <div class="overlay-step-number">4</div>
+              <p class="overlay-step-text">Enable <strong>"Show updates for all pages"</strong> toggle if needed</p>
+            </li>
+          </ol>
+        </div>
+        <div class="overlay-footer">
+          <button class="overlay-button overlay-button-primary" id="overlay-close">Got it!</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Mode Settings Overlay -->
+    <div class="mode-settings-overlay" id="mode-settings-overlay">
+      <div class="mode-settings-content">
+        <div class="mode-settings-header">
+          <span class="mode-settings-icon">⚙️</span>
+          <h2 class="mode-settings-title">Collection Settings</h2>
+        </div>
+        <div class="mode-settings-body" id="mode-settings-body">
+          <!-- Collections will be dynamically inserted here -->
+        </div>
+        <div class="mode-settings-footer">
+          <button class="overlay-button overlay-button-secondary" id="mode-settings-cancel">Cancel</button>
+          <button class="overlay-button overlay-button-primary" id="mode-settings-apply">Apply</button>
+        </div>
+      </div>
+    </div>
+    
     <script>
       console.log("[UI INIT] UI script loaded and starting");
       const tabs = Array.from(document.querySelectorAll(".tab"));
       const views = Array.from(document.querySelectorAll(".view[data-panel]"));
       const panel = document.querySelector(".panel");
       const rescanButton = document.querySelector(".rescan");
+      
+      const overviewCards = {
+        components: {
+          card: document.querySelector('[data-card="components"]'),
+          number: document.getElementById("component-count")
+        },
+        instances: {
+          card: document.querySelector('[data-card="instances"]'),
+          number: document.getElementById("instance-count")
+        },
+        detachments: {
+          card: document.querySelector('[data-card="detachments"]'),
+          number: document.getElementById("detachment-count")
+        },
+        outOfDate: {
+          card: document.querySelector('[data-card="outofdate"]'),
+          number: document.getElementById("outofdate-count")
+        },
+        codeMissing: {
+          card: document.querySelector('[data-card="code-missing"]'),
+          number: document.getElementById("codeconnect-count")
+        },
+        docsMissing: {
+          card: document.querySelector('[data-card="docs-missing"]'),
+          number: document.getElementById("docs-count")
+        }
+      };
+      const overviewPlaceholder = document.getElementById("overview-empty");
       
       // Get elements for both inspect and documentation tabs
       const inspectView = document.querySelector('.view[data-panel="inspect"]');
@@ -461,7 +1082,6 @@
       const inspectMetadata = inspectView.querySelector(".doc-metadata");
       const inspectPrimary = inspectView.querySelector("[data-doc-primary]");
       const inspectSecondary = inspectView.querySelector("[data-doc-secondary]");
-      const inspectFrame = inspectView.querySelector(".doc-frame");
       
       const docMessage = documentationView.querySelector(".doc-message");
       const docMetadata = documentationView.querySelector(".doc-metadata");
@@ -471,6 +1091,158 @@
       
       const defaultPrimary = docPrimary.textContent;
       const defaultSecondary = docSecondary.textContent;
+
+      // Platform and mode selection
+      const platformSelect = document.getElementById('platform-select');
+      const modeSettingsButton = document.getElementById('mode-settings-button');
+      const modeSettingsOverlay = document.getElementById('mode-settings-overlay');
+      const modeSettingsBody = document.getElementById('mode-settings-body');
+      const modeSettingsCancel = document.getElementById('mode-settings-cancel');
+      const modeSettingsApply = document.getElementById('mode-settings-apply');
+      
+      let selectedPlatform = 'web';
+      let selectedModes = {}; // Map of collectionId -> modeId
+      let currentMetadataCache = null;
+      let availableCollections = [];
+
+      // Platform-specific token formatters
+      function formatTokenName(variableName, platform) {
+        if (!variableName) return variableName;
+        
+        // Remove any existing syntax
+        var cleanName = variableName.replace(/^(var\(--|@|\$)/, '').replace(/\)$/, '');
+        
+        switch(platform) {
+          case 'web':
+            // CSS variable: var(--token-name)
+            return 'var(--' + cleanName.toLowerCase().replace(/\//g, '-').replace(/\s+/g, '-') + ')';
+          case 'ios':
+            // Swift: TokenName or token.name
+            return cleanName.replace(/\//g, '.').replace(/\s+/g, '');
+          case 'android':
+            // Android XML: @token_name
+            return '@' + cleanName.toLowerCase().replace(/\//g, '_').replace(/\s+/g, '_');
+          default:
+            return variableName;
+        }
+      }
+
+      // Populate mode settings modal with collections
+      function populateModeSettings(collections) {
+        if (!collections || collections.length === 0) {
+          modeSettingsBody.innerHTML = '<p style="color: #cbd5f5; text-align: center; padding: 20px;">No variable collections found in this file.</p>';
+          return;
+        }
+        
+        availableCollections = collections;
+        var html = '';
+        
+        for (var i = 0; i < collections.length; i++) {
+          var collection = collections[i];
+          if (collection.modes && collection.modes.length > 0) {
+            html += '<div class="mode-collection">';
+            html += '<div class="mode-collection-title">' + escapeHtml(collection.name) + '</div>';
+            html += '<div class="mode-options">';
+            
+            for (var j = 0; j < collection.modes.length; j++) {
+              var mode = collection.modes[j];
+              var isSelected = selectedModes[collection.id] === mode.modeId;
+              html += '<div class="mode-option' + (isSelected ? ' selected' : '') + '" data-collection-id="' + collection.id + '" data-mode-id="' + mode.modeId + '">';
+              html += '<div class="mode-radio"></div>';
+              html += '<p class="mode-label">' + escapeHtml(mode.name) + '</p>';
+              html += '</div>';
+            }
+            
+            html += '</div>';
+            html += '</div>';
+          }
+        }
+        
+        modeSettingsBody.innerHTML = html;
+        
+        // Add click handlers to mode options
+        var modeOptions = modeSettingsBody.querySelectorAll('.mode-option');
+        modeOptions.forEach(function(option) {
+          option.addEventListener('click', function() {
+            var collectionId = option.getAttribute('data-collection-id');
+            var modeId = option.getAttribute('data-mode-id');
+            
+            // Remove selected class from siblings
+            var siblings = option.parentElement.querySelectorAll('.mode-option');
+            siblings.forEach(function(sibling) {
+              sibling.classList.remove('selected');
+            });
+            
+            // Add selected class to clicked option
+            option.classList.add('selected');
+            
+            // Update temporary selection (will be applied on Apply button)
+            selectedModes[collectionId] = modeId;
+          });
+        });
+      }
+
+      // Handle platform change
+      if (platformSelect) {
+        platformSelect.addEventListener('change', function() {
+          selectedPlatform = platformSelect.value;
+          console.log('[UI] Platform changed to:', selectedPlatform);
+          
+          // Re-render metadata if we have cached data
+          if (currentMetadataCache) {
+            renderMetadata(currentMetadataCache, 'inspect');
+          }
+        });
+      }
+
+      // Handle mode settings button click
+      if (modeSettingsButton) {
+        modeSettingsButton.addEventListener('click', function() {
+          console.log('[UI] Mode settings button clicked');
+          if (availableCollections.length > 0) {
+            populateModeSettings(availableCollections);
+            modeSettingsOverlay.classList.add('active');
+          } else {
+            console.log('[UI] No collections available yet');
+          }
+        });
+      }
+
+      // Handle mode settings cancel
+      if (modeSettingsCancel) {
+        modeSettingsCancel.addEventListener('click', function() {
+          console.log('[UI] Mode settings cancelled');
+          modeSettingsOverlay.classList.remove('active');
+        });
+      }
+
+      // Handle mode settings apply
+      if (modeSettingsApply) {
+        modeSettingsApply.addEventListener('click', function() {
+          console.log('[UI] Mode settings applied:', selectedModes);
+          modeSettingsOverlay.classList.remove('active');
+          
+          // Request updated data with new modes
+          parent.postMessage(
+            { pluginMessage: { 
+              type: "request-documentation", 
+              tab: "inspect",
+              selectedModes: selectedModes 
+            }},
+            "*"
+          );
+        });
+      }
+
+      // Close mode settings when clicking outside
+      if (modeSettingsOverlay) {
+        modeSettingsOverlay.addEventListener('click', function(e) {
+          if (e.target === modeSettingsOverlay) {
+            console.log('[UI] Mode settings overlay background clicked - closing');
+            modeSettingsOverlay.classList.remove('active');
+          }
+        });
+      }
 
       function renderMetadata(metadata, targetTab) {
         console.log("[renderMetadata] Called with metadata:", metadata, "targetTab:", targetTab);
@@ -485,6 +1257,77 @@
           currentMetadata.innerHTML = "";
           currentMetadata.hidden = true;
           return;
+        }
+
+        // Cache metadata for inspect tab (for re-rendering on platform change)
+        if (isInspect) {
+          currentMetadataCache = metadata;
+          
+          // Store collections data for mode settings and show controls
+          console.log('[UI] Processing collections. metadata.collections:', metadata.collections);
+          var collectionsControl = document.getElementById('collections-control');
+          var platformControl = document.getElementById('platform-control');
+          
+          // Always show platform control when component is selected
+          if (platformControl) {
+            console.log('[UI] Showing platform control');
+            platformControl.classList.remove('hidden');
+          }
+          
+          if (metadata.collections && metadata.collections.length > 0) {
+            console.log('[UI] Found', metadata.collections.length, 'collections');
+            availableCollections = metadata.collections;
+            
+            // Show collections button
+            if (collectionsControl) {
+              console.log('[UI] Showing collections button');
+              collectionsControl.classList.remove('hidden');
+            } else {
+              console.log('[UI] WARNING: collections control not found in DOM');
+            }
+            
+            // Initialize selectedModes with first mode of each collection if not set
+            var modesChanged = false;
+            metadata.collections.forEach(function(collection) {
+              console.log('[UI] Checking collection:', collection.name, 'modes:', collection.modes);
+              if (collection.modes && collection.modes.length > 0 && !selectedModes[collection.id]) {
+                selectedModes[collection.id] = collection.modes[0].modeId;
+                modesChanged = true;
+                console.log('[UI] Initialized mode for', collection.name, 'to', collection.modes[0].name);
+              }
+            });
+            
+            // If modes were initialized, request updated data with these modes
+            if (modesChanged) {
+              console.log('[UI] ===== AUTO-REFRESH TRIGGERED =====');
+              console.log('[UI] Modes were initialized, requesting updated data with selected modes:', selectedModes);
+              console.log('[UI] Collections that triggered refresh:', metadata.collections.map(function(c) { 
+                return c.name + ' (selected mode: ' + selectedModes[c.id] + ')'; 
+              }));
+              
+              setTimeout(function() {
+                console.log('[UI] Sending auto-refresh request now...');
+                parent.postMessage(
+                  { pluginMessage: { 
+                    type: "request-documentation", 
+                    tab: "inspect",
+                    selectedModes: selectedModes 
+                  }},
+                  "*"
+                );
+                console.log('[UI] Auto-refresh request sent!');
+              }, 50); // Reduced delay
+            } else {
+              console.log('[UI] No auto-refresh needed - modes already set');
+            }
+          } else {
+            console.log('[UI] No collections found, hiding button');
+            // Hide collections button and make platform dropdown full width
+            if (collectionsControl) {
+              collectionsControl.classList.add('hidden');
+            }
+            availableCollections = [];
+          }
         }
 
         console.log("[renderMetadata] Rendering metadata:", JSON.stringify(metadata, null, 2));
@@ -596,6 +1439,11 @@
         
         addItem("Type", formattedType);
         
+        // Add Code Connect status
+        if (metadata.codeConnect !== undefined) {
+          addItem("Code Connect", metadata.codeConnect ? "Yes" : "No");
+        }
+        
         // Render variables in organized sections: Color, Typography, Spacing, Corner Radius
         var hasAnyVariables = false;
         
@@ -609,7 +1457,8 @@
             html += '<div class="variable-row">';
             html += '<div class="variable-property">' + escapeHtml(colorVar.property) + '</div>';
             html += '<div class="variable-detail">';
-            html += '<div class="variable-name">' + escapeHtml(colorVar.name) + '</div>';
+            var displayName = isInspect ? formatTokenName(colorVar.name, selectedPlatform) : colorVar.name;
+            html += '<div class="variable-name">' + escapeHtml(displayName) + '</div>';
             if (colorVar.value) {
               html += '<div class="variable-value">' + escapeHtml(colorVar.value) + '</div>';
             }
@@ -629,7 +1478,8 @@
             html += '<div class="variable-row">';
             html += '<div class="variable-property">' + escapeHtml(typoVar.property) + '</div>';
             html += '<div class="variable-detail">';
-            html += '<div class="variable-name">' + escapeHtml(typoVar.name) + '</div>';
+            var displayName = isInspect ? formatTokenName(typoVar.name, selectedPlatform) : typoVar.name;
+            html += '<div class="variable-name">' + escapeHtml(displayName) + '</div>';
             if (typoVar.value) {
               html += '<div class="variable-value">' + escapeHtml(typoVar.value) + '</div>';
             }
@@ -649,7 +1499,8 @@
             html += '<div class="variable-row">';
             html += '<div class="variable-property">' + escapeHtml(spacingVar.property) + '</div>';
             html += '<div class="variable-detail">';
-            html += '<div class="variable-name">' + escapeHtml(spacingVar.name) + '</div>';
+            var displayName = isInspect ? formatTokenName(spacingVar.name, selectedPlatform) : spacingVar.name;
+            html += '<div class="variable-name">' + escapeHtml(displayName) + '</div>';
             if (spacingVar.value) {
               html += '<div class="variable-value">' + escapeHtml(spacingVar.value) + '</div>';
             }
@@ -669,7 +1520,8 @@
             html += '<div class="variable-row">';
             html += '<div class="variable-property">' + escapeHtml(radiusVar.property) + '</div>';
             html += '<div class="variable-detail">';
-            html += '<div class="variable-name">' + escapeHtml(radiusVar.name) + '</div>';
+            var displayName = isInspect ? formatTokenName(radiusVar.name, selectedPlatform) : radiusVar.name;
+            html += '<div class="variable-name">' + escapeHtml(displayName) + '</div>';
             if (radiusVar.value) {
               html += '<div class="variable-value">' + escapeHtml(radiusVar.value) + '</div>';
             }
@@ -683,8 +1535,8 @@
         if (!hasAnyVariables && metadata.styles && metadata.styles.length > 0) {
           addItem("Styles", metadata.styles);
         }
-        // Add documentation links with enhanced styling
-        if (metadata.links && metadata.links.length > 0) {
+        // Add documentation links with enhanced styling (only for Documentation tab)
+        if (!isInspect && metadata.links && metadata.links.length > 0) {
           html += '<div class="metadata-item">';
           html += '<div class="metadata-label">Documentation Links</div>';
           html += '<div class="doc-links">';
@@ -736,6 +1588,21 @@
 
         panel.dataset.mode = targetId;
         rescanButton.hidden = targetId === "documentation" || targetId === "inspect";
+        
+        // Remove iframe-active class when switching away from documentation
+        if (targetId !== "documentation") {
+          panel.classList.remove('iframe-active');
+        }
+        
+        // Trigger component scan when switching to overview tab
+        if (targetId === "overview") {
+          console.log("[setActiveTab] Overview tab activated, requesting component scan");
+          setCardsLoading(["components", "instances", "detachments", "outOfDate", "codeMissing", "docsMissing"]);
+          parent.postMessage(
+            { pluginMessage: { type: "scan-components" } },
+            "*"
+          );
+        }
 
         if (targetId === "documentation" || targetId === "inspect") {
           console.log("[setActiveTab] " + targetId + " tab activated, requesting metadata");
@@ -752,14 +1619,109 @@
         });
       });
 
+      // Add click handler for "Out of date" card
+      var outOfDateCard = document.getElementById("outofdate-card");
+      var libraryOverlay = document.getElementById("library-overlay");
+      var overlayCloseButton = document.getElementById("overlay-close");
+      
+      if (outOfDateCard && libraryOverlay) {
+        outOfDateCard.addEventListener("click", () => {
+          console.log("[UI] Out of date card clicked - showing overlay");
+          libraryOverlay.classList.add("active");
+        });
+      }
+      
+      if (overlayCloseButton && libraryOverlay) {
+        overlayCloseButton.addEventListener("click", () => {
+          console.log("[UI] Overlay close button clicked");
+          libraryOverlay.classList.remove("active");
+        });
+      }
+      
+      // Close overlay when clicking outside the content
+      if (libraryOverlay) {
+        libraryOverlay.addEventListener("click", (e) => {
+          if (e.target === libraryOverlay) {
+            console.log("[UI] Overlay background clicked - closing");
+            libraryOverlay.classList.remove("active");
+          }
+        });
+      }
+
       rescanButton.addEventListener("click", () => {
         console.log("[UI] Rescan button clicked");
+        var currentTab = panel.dataset.mode;
+        if (currentTab === "overview") {
+          console.log("[UI] Triggering component scan");
+          setCardsLoading(["components", "instances", "detachments", "outOfDate", "codeMissing", "docsMissing"]);
+          parent.postMessage(
+            { pluginMessage: { type: "scan-components" } },
+            "*"
+          );
+        } else {
         parent.postMessage(
           { pluginMessage: { type: "request-documentation" } },
           "*"
         );
+        }
         console.log("[UI] Rescan message sent");
       });
+
+      // Format large numbers with K suffix
+      function formatNumber(num, showLoading) {
+        if (num === null || num === undefined) {
+          return showLoading ? "..." : "-";
+        }
+        if (num === 0) {
+          return "0";
+        }
+        if (num >= 1000) {
+          return (num / 1000).toFixed(1).replace(/\.0$/, "") + "K";
+        }
+        return num.toString();
+      }
+      
+      function applyCardLayout() {
+        const cards = Object.values(overviewCards)
+          .map((entry) => entry.card)
+          .filter((card) => card);
+        cards.forEach((card) => card.classList.remove("card--full"));
+        const visibleCards = cards.filter((card) => !card.hidden);
+        if (visibleCards.length % 2 === 1 && visibleCards.length > 0) {
+          visibleCards[visibleCards.length - 1].classList.add("card--full");
+        }
+      }
+      
+      function updateOverviewPlaceholder() {
+        if (!overviewPlaceholder) {
+          return;
+        }
+        const hasVisibleCard = Object.values(overviewCards).some((entry) => entry.card && !entry.card.hidden);
+        overviewPlaceholder.hidden = hasVisibleCard;
+        applyCardLayout();
+      }
+      
+      function updateCardState(key, value, options) {
+        var entry = overviewCards[key];
+        if (!entry) {
+          return;
+        }
+        var settings = options || {};
+        var isLoading = Boolean(settings.loading);
+        entry.number.textContent = formatNumber(value, isLoading);
+        var shouldHide = !isLoading && value === 0;
+        entry.card.hidden = shouldHide;
+        updateOverviewPlaceholder();
+      }
+      
+      function setCardsLoading(keys) {
+        if (!Array.isArray(keys)) {
+          return;
+        }
+        keys.forEach(function(key) {
+          updateCardState(key, null, { loading: true });
+        });
+      }
 
       console.log("[UI INIT] All event listeners attached");
       console.log("[UI INIT] UI fully initialized");
@@ -777,7 +1739,16 @@
           console.log("[window.onmessage] Unwrapped pluginMessage:", message);
         }
         
-        if (message && message.type === "documentation-link") {
+        if (message && message.type === "overview-stats") {
+          console.log("[window.onmessage] Overview stats received:", message);
+          
+          updateCardState("components", message.componentCount);
+          updateCardState("instances", message.totalInstanceCount);
+          updateCardState("detachments", message.detachmentCount);
+          updateCardState("codeMissing", message.componentsWithoutCode);
+          updateCardState("docsMissing", message.componentsWithoutDocs);
+          updateCardState("outOfDate", message.outOfDateCount, { loading: message.outOfDateCount === null });
+        } else if (message && message.type === "documentation-link") {
           console.log("[window.onmessage] Documentation message:", JSON.stringify(message, null, 2));
           var data = message;
           
@@ -790,22 +1761,59 @@
           var currentMetadata = isInspect ? inspectMetadata : docMetadata;
           var currentPrimary = isInspect ? inspectPrimary : docPrimary;
           var currentSecondary = isInspect ? inspectSecondary : docSecondary;
-          var currentFrame = isInspect ? inspectFrame : docFrame;
           
           var hasMetadata = data.metadata !== null && data.metadata !== undefined;
           console.log("[window.onmessage] Has metadata:", hasMetadata, "Has URL:", !!data.url, "Target tab:", targetTab);
 
-          if (data.url) {
-            console.log("[window.onmessage] Showing iframe with URL:", data.url);
-            currentMessage.hidden = true;
-            currentFrame.hidden = false;
-            if (currentFrame.src !== data.url) {
-              currentFrame.src = data.url;
-            }
+          // Handle Inspect tab (no iframe)
+          if (isInspect) {
             if (hasMetadata) {
+              console.log("[window.onmessage] Showing metadata in Inspect tab");
+              currentMessage.hidden = true;
               renderMetadata(data.metadata, targetTab);
             } else {
+              console.log("[window.onmessage] Showing placeholder message in Inspect tab");
+              currentMetadata.innerHTML = "";
               currentMetadata.hidden = true;
+              currentMessage.hidden = false;
+              
+              // Hide controls when no selection
+              var platformControl = document.getElementById('platform-control');
+              var collectionsControl = document.getElementById('collections-control');
+              if (platformControl) platformControl.classList.add('hidden');
+              if (collectionsControl) collectionsControl.classList.add('hidden');
+
+              switch (data.reason) {
+                case "missing":
+                  currentPrimary.textContent = "No component data.";
+                  currentSecondary.textContent =
+                    "This component or instance does not have any data to display.";
+                  break;
+                case "unsupported":
+                  currentPrimary.textContent = "Unsupported selection.";
+                  currentSecondary.textContent =
+                    "Select a design system component or instance to inspect.";
+                  break;
+                case "no-selection":
+                  currentPrimary.textContent = "Select a component or instance to display the correct information.";
+                  currentSecondary.textContent = "Component details will display here once a component or instance is selected.";
+                  break;
+                default:
+                  currentPrimary.textContent = "Unable to load component data.";
+                  currentSecondary.textContent =
+                    "Try selecting a different component or run a rescan.";
+              }
+            }
+          } else {
+            // Handle Documentation tab (with iframe)
+            if (data.url) {
+              console.log("[window.onmessage] Showing iframe with URL:", data.url);
+              currentMessage.hidden = true;
+              docFrame.hidden = false;
+              currentMetadata.hidden = true; // Hide metadata, only show iframe
+              panel.classList.add('iframe-active'); // Remove padding for full-screen iframe
+              if (docFrame.src !== data.url) {
+                docFrame.src = data.url;
             }
           } else {
             console.log("[window.onmessage] No URL, reason:", data.reason);
@@ -830,52 +1838,23 @@
               // Load the first documentation link in the iframe
               console.log("[window.onmessage] Loading documentation link in iframe:", firstLink);
               currentMessage.hidden = true;
-              currentFrame.hidden = false;
-              if (currentFrame.src !== firstLink) {
-                currentFrame.src = firstLink;
-              }
-              if (hasMetadata) {
-                renderMetadata(data.metadata, targetTab);
-              } else {
-                currentMetadata.hidden = true;
+                docFrame.hidden = false;
+                currentMetadata.hidden = true; // Hide metadata, only show iframe
+                panel.classList.add('iframe-active'); // Remove padding for full-screen iframe
+                if (docFrame.src !== firstLink) {
+                  docFrame.src = firstLink;
               }
             } else {
               // No URL and no links to display
-              currentFrame.hidden = true;
-              currentFrame.removeAttribute("src");
+                docFrame.hidden = true;
+                docFrame.removeAttribute("src");
+                currentMetadata.hidden = true; // Hide metadata
+                currentMessage.hidden = false; // Show placeholder
+                panel.classList.remove('iframe-active'); // Restore padding
 
-              if (hasMetadata) {
-                console.log("[window.onmessage] Showing metadata without URL");
-                // Always hide placeholder and render metadata
-                currentMessage.hidden = true;
-                renderMetadata(data.metadata, targetTab);
-              } else {
-              console.log("[window.onmessage] Showing placeholder message");
-              // Clear and hide metadata
-              currentMetadata.innerHTML = "";
-              currentMetadata.hidden = true;
-              currentMessage.hidden = false;
-
-              switch (data.reason) {
-                case "missing":
-                  currentPrimary.textContent = "Documentation unavailable.";
-                  currentSecondary.textContent =
-                    "This component or instance does not have an attached documentation link.";
-                  break;
-                case "unsupported":
-                  currentPrimary.textContent = "Unsupported selection.";
-                  currentSecondary.textContent =
-                    "Select a design system component or instance to preview documentation.";
-                  break;
-                case "no-selection":
-                  currentPrimary.textContent = defaultPrimary;
-                  currentSecondary.textContent = defaultSecondary;
-                  break;
-                default:
-                  currentPrimary.textContent = "Unable to load documentation.";
-                  currentSecondary.textContent =
-                    "Try selecting a different component or run a rescan.";
-              }
+                // Show "no link available" message
+                currentPrimary.textContent = "No documentation link available.";
+                currentSecondary.textContent = "This component doesn't have a documentation link attached.";
               }
             }
           }

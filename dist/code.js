@@ -297,9 +297,10 @@ function extractLinks(node) {
   return links;
 }
 
-function extractMetadata(node, mainComponent) {
+function extractMetadata(node, mainComponent, selectedModes) {
   console.log("[extractMetadata] Starting extraction for node:", node.name, node.type);
   console.log("[extractMetadata] Node ID:", node.id);
+  console.log("[extractMetadata] Selected modes for variable resolution:", selectedModes);
   console.log("[extractMetadata] Node has description:", "description" in node);
   if ("description" in node) {
     console.log("[extractMetadata] Node description:", node.description);
@@ -318,9 +319,11 @@ function extractMetadata(node, mainComponent) {
     name: node.name || "Unnamed",
     type: node.type || "Unknown",
     description: "",
+    codeConnect: false,
     tokens: [],
     styles: [],
     links: [],
+    collections: [], // Variable collections and modes
     // Organized variable categories
     colorVariables: [],
     typographyVariables: [],
@@ -339,6 +342,126 @@ function extractMetadata(node, mainComponent) {
     }
   } catch (e) {
     console.log("[extractMetadata] Error extracting description:", e);
+  }
+
+  // Check for Code Connect
+  try {
+    var nodeToCheck = mainComponent || node;
+    if ("devResources" in nodeToCheck && Array.isArray(nodeToCheck.devResources) && nodeToCheck.devResources.length > 0) {
+      metadata.codeConnect = true;
+      console.log("[extractMetadata] Code Connect found on component");
+    } else {
+      console.log("[extractMetadata] No Code Connect found");
+    }
+  } catch (e) {
+    console.log("[extractMetadata] Error checking Code Connect:", e);
+  }
+
+  // Extract variable collections and modes from bound variables
+  // This includes both local AND library (remote) variables
+  try {
+    console.log("[extractMetadata] Extracting collections from bound variables...");
+    var collectionMap = {}; // Use map to avoid duplicates
+    
+    // Helper function to process bound variables and extract their collections
+    function extractCollectionsFromBoundVariables(boundVars) {
+      if (!boundVars || typeof boundVars !== 'object') return;
+      
+      for (var prop in boundVars) {
+        if (boundVars.hasOwnProperty(prop)) {
+          var binding = boundVars[prop];
+          
+          // Handle direct variable binding
+          if (binding && binding.id) {
+            try {
+              var variable = figma.variables.getVariableById(binding.id);
+              if (variable && variable.variableCollectionId) {
+                var collectionId = variable.variableCollectionId;
+                
+                // Skip if we already have this collection
+                if (!collectionMap[collectionId]) {
+                  try {
+                    var collection = figma.variables.getVariableCollectionById(collectionId);
+                    if (collection) {
+                      console.log("[extractMetadata] Found collection:", collection.name, "from variable:", variable.name);
+                      collectionMap[collectionId] = collection;
+                    }
+                  } catch (e) {
+                    console.log("[extractMetadata] Could not get collection for ID:", collectionId, e);
+                  }
+                }
+              }
+            } catch (e) {
+              console.log("[extractMetadata] Could not get variable for ID:", binding.id, e);
+            }
+          }
+          
+          // Handle nested bindings (componentProperties, etc.)
+          if (binding && typeof binding === 'object' && !binding.id) {
+            extractCollectionsFromBoundVariables(binding);
+          }
+        }
+      }
+    }
+    
+    // Check boundVariables on the node
+    if ("boundVariables" in node && node.boundVariables) {
+      console.log("[extractMetadata] Node has boundVariables property");
+      extractCollectionsFromBoundVariables(node.boundVariables);
+    }
+    
+    // Also check children for bound variables
+    if ("children" in node && Array.isArray(node.children)) {
+      for (var i = 0; i < node.children.length; i += 1) {
+        var child = node.children[i];
+        if ("boundVariables" in child && child.boundVariables) {
+          extractCollectionsFromBoundVariables(child.boundVariables);
+        }
+      }
+    }
+    
+    // Convert collection map to array and extract modes
+    console.log("[extractMetadata] Found", Object.keys(collectionMap).length, "unique collections");
+    for (var collectionId in collectionMap) {
+      if (collectionMap.hasOwnProperty(collectionId)) {
+        var collection = collectionMap[collectionId];
+        console.log("[extractMetadata] Processing collection:", collection.name);
+        console.log("[extractMetadata] Collection ID:", collection.id);
+        console.log("[extractMetadata] Collection modes:", collection.modes);
+        console.log("[extractMetadata] Collection remote:", collection.remote);
+        
+        var collectionData = {
+          id: collection.id,
+          name: collection.name,
+          remote: collection.remote || false,
+          modes: []
+        };
+        
+        // Extract modes from the collection
+        if (collection.modes && Array.isArray(collection.modes)) {
+          console.log("[extractMetadata] Collection has", collection.modes.length, "modes");
+          for (var j = 0; j < collection.modes.length; j += 1) {
+            var mode = collection.modes[j];
+            console.log("[extractMetadata] Mode", j, ":", mode.name, "ID:", mode.modeId);
+            collectionData.modes.push({
+              modeId: mode.modeId,
+              name: mode.name
+            });
+          }
+        } else {
+          console.log("[extractMetadata] Collection has no modes array");
+        }
+        
+        metadata.collections.push(collectionData);
+        console.log("[extractMetadata] Added collection:", collection.name, "with", collectionData.modes.length, "modes");
+      }
+    }
+    
+    console.log("[extractMetadata] Final collections array length:", metadata.collections.length);
+    console.log("[extractMetadata] Final collections data:", JSON.stringify(metadata.collections));
+  } catch (e) {
+    console.log("[extractMetadata] Error extracting collections:", e);
+    console.log("[extractMetadata] Error stack:", e.stack);
   }
 
   try {
@@ -655,8 +778,27 @@ function extractMetadata(node, mainComponent) {
                 var valuesByMode = variable.valuesByMode;
                 var modeKeys = Object.keys(valuesByMode);
                 
+                // Determine which mode to use for this variable
+                var modeIdToUse = modeKeys[0]; // Default to first mode
+                console.log("[extractMetadata] Variable:", variable.name, "Collection ID:", variable.variableCollectionId);
+                console.log("[extractMetadata] Available modes for this variable:", modeKeys);
+                console.log("[extractMetadata] selectedModes object:", selectedModes);
+                
+                if (selectedModes && variable.variableCollectionId) {
+                  var collectionId = variable.variableCollectionId;
+                  if (selectedModes[collectionId]) {
+                    modeIdToUse = selectedModes[collectionId];
+                    console.log("[extractMetadata] ✓ Using selected mode", modeIdToUse, "for variable", variable.name);
+                  } else {
+                    console.log("[extractMetadata] ✗ No selected mode for collection", collectionId, ", using first mode:", modeIdToUse);
+                  }
+                } else {
+                  console.log("[extractMetadata] ✗ No selectedModes provided, using first mode:", modeIdToUse);
+                }
+                
                 if (modeKeys.length > 0) {
-                  var value = valuesByMode[modeKeys[0]];
+                  var value = valuesByMode[modeIdToUse];
+                  console.log("[extractMetadata] Resolved value for mode", modeIdToUse, ":", value);
                   
                   if (variable.resolvedType === "COLOR") {
                     variableCategory = "color";
@@ -794,8 +936,15 @@ function extractMetadata(node, mainComponent) {
                       if (variable.resolvedType === "COLOR") {
                         var varValue = variable.valuesByMode;
                         var modeKeys = Object.keys(varValue);
-                        for (var m = 0; m < modeKeys.length; m += 1) {
-                          var modeValue = varValue[modeKeys[m]];
+                        
+                        // Prioritize selected mode for this variable's collection
+                        var modeToCheck = modeKeys[0]; // Default
+                        if (selectedModes && variable.variableCollectionId && selectedModes[variable.variableCollectionId]) {
+                          modeToCheck = selectedModes[variable.variableCollectionId];
+                        }
+                        
+                        // Only check the appropriate mode (selected or first)
+                        var modeValue = varValue[modeToCheck];
                           if (modeValue && typeof modeValue === "object" && "r" in modeValue) {
                             var varR = Math.round(modeValue.r * 255);
                             var varG = Math.round(modeValue.g * 255);
@@ -840,7 +989,6 @@ function extractMetadata(node, mainComponent) {
                               }
                             }
                           }
-                        }
                       }
                     } catch (varCheckError) {
                       console.log("[extractMetadata] Error checking variable", variable.name, ":", varCheckError);
@@ -864,6 +1012,18 @@ function extractMetadata(node, mainComponent) {
     console.log("[extractMetadata] Extracted tokens:", metadata.tokens);
   } catch (e) {
     console.log("[extractMetadata] Error extracting tokens:", e);
+  }
+
+  // Sort color variables to ensure Fill comes before Stroke
+  if (metadata.colorVariables && metadata.colorVariables.length > 0) {
+    metadata.colorVariables.sort(function(a, b) {
+      // Define priority order
+      var order = { "Fill": 1, "Fill Color": 1, "Fill Opacity": 2, "Stroke": 3, "Stroke Color": 3, "Stroke Weight": 4 };
+      var aPriority = order[a.property] || 999;
+      var bPriority = order[b.property] || 999;
+      return aPriority - bPriority;
+    });
+    console.log("[extractMetadata] Sorted color variables:", metadata.colorVariables);
   }
 
   console.log("[extractMetadata] ===== EXTRACTION SUMMARY =====");
@@ -896,8 +1056,9 @@ function notifyDocumentation(reason, url, metadata) {
   figma.ui.postMessage(message);
 }
 
-function resolveDocumentationFromSelection() {
+function resolveDocumentationFromSelection(selectedModes) {
   console.log("[resolveDocumentationFromSelection] Starting resolution");
+  console.log("[resolveDocumentationFromSelection] Selected modes:", selectedModes);
   var selection = figma.currentPage.selection[0];
 
   if (!selection) {
@@ -918,9 +1079,9 @@ function resolveDocumentationFromSelection() {
 
   var metadata = null;
   try {
-    // Pass main component to extractMetadata so it can check both
+    // Pass main component and selected modes to extractMetadata
     var mainComp = isInstance && node ? node : null;
-    metadata = extractMetadata(selection, mainComp);
+    metadata = extractMetadata(selection, mainComp, selectedModes);
     if (isInstance && node) {
       metadata.componentName = node.name;
     }
@@ -980,8 +1141,14 @@ figma.ui.onmessage = function (message) {
 
   console.log("[figma.ui.onmessage] Message type:", message.type);
   if (message.type === "request-documentation") {
-    console.log("[figma.ui.onmessage] Handling request-documentation");
-    resolveDocumentationFromSelection();
+    console.log("[figma.ui.onmessage] ===== HANDLING REQUEST-DOCUMENTATION =====");
+    var selectedModes = message.selectedModes || {};
+    console.log("[figma.ui.onmessage] Selected modes received:", JSON.stringify(selectedModes));
+    console.log("[figma.ui.onmessage] Number of collections in selectedModes:", Object.keys(selectedModes).length);
+    resolveDocumentationFromSelection(selectedModes);
+  } else if (message.type === "scan-components") {
+    console.log("[figma.ui.onmessage] Handling scan-components");
+    scanFileForComponents();
   } else {
     console.log("[figma.ui.onmessage] Unknown message type:", message.type);
   }
@@ -1006,9 +1173,348 @@ figma.on("selectionchange", function () {
   }
 });
 
+function hasDocumentation(node) {
+  try {
+    return (
+      "documentationLinks" in node &&
+      Array.isArray(node.documentationLinks) &&
+      node.documentationLinks.length > 0
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
+function hasCodeConnect(node) {
+  try {
+    return (
+      "devResources" in node &&
+      Array.isArray(node.devResources) &&
+      node.devResources.length > 0
+    );
+  } catch (e) {
+    return false;
+  }
+}
+
+function scanFileForComponents() {
+  console.log("[scanFileForComponents] Starting file scan");
+  
+  var componentSetIds = {};
+  var standaloneComponentIds = {};
+  var totalInstanceCount = 0;
+  var detachmentCount = 0;
+  var instancesData = [];
+  var detachedNodes = [];
+  var componentNameMap = {}; // Map of component names defined in this file
+  var componentUsageMap = {}; // Map of component names actually used via instances
+  var suspiciousFrames = []; // Frames/groups that might be detached instances
+  var trackedComponents = {}; // Map of component metadata for stats
+  
+  function recordComponentInfo(componentNode) {
+    if (!componentNode || !componentNode.id) {
+      return;
+    }
+    if (trackedComponents[componentNode.id]) {
+      return;
+    }
+    trackedComponents[componentNode.id] = {
+      name: componentNode.name || "Unnamed Component",
+      hasDocs: hasDocumentation(componentNode),
+      hasCode: hasCodeConnect(componentNode)
+    };
+  }
+  
+  function traverseNode(node, parentType, isInsideInstance) {
+    // Count COMPONENT_SET as one unique component (variant group)
+    if (node.type === "COMPONENT_SET") {
+      componentSetIds[node.id] = {
+        id: node.id,
+        name: node.name
+      };
+      componentNameMap[node.name] = node.id;
+      console.log("[scanFileForComponents] Found component set (variants):", node.name);
+    }
+    
+    // Count standalone COMPONENT nodes (but not those inside COMPONENT_SET)
+    if (node.type === "COMPONENT" && parentType !== "COMPONENT_SET") {
+      standaloneComponentIds[node.id] = {
+        id: node.id,
+        name: node.name
+      };
+      componentNameMap[node.name] = node.id;
+      console.log("[scanFileForComponents] Found standalone component:", node.name);
+      recordComponentInfo(node);
+    }
+    
+    // Count instances, but exclude those nested inside other instances or inside component definitions
+    if (node.type === "INSTANCE") {
+      // Only count if:
+      // 1. Not inside another instance (exclude nested instances)
+      // 2. Not inside a component definition (exclude instances that are part of component structure)
+      var shouldCount = !isInsideInstance && 
+                        parentType !== "COMPONENT" && 
+                        parentType !== "COMPONENT_SET";
+      
+      if (shouldCount) {
+        totalInstanceCount++;
+        
+        // Collect instance data for detachment checking
+        var mainComponent = null;
+        if ("mainComponent" in node && node.mainComponent) {
+          mainComponent = node.mainComponent;
+          // Track usage of this component name
+          var compName = mainComponent.name || "Unnamed Component";
+          componentUsageMap[compName] = (componentUsageMap[compName] || 0) + 1;
+          recordComponentInfo(mainComponent);
+        }
+        
+        instancesData.push({
+          node: node,
+          mainComponent: mainComponent
+        });
+        
+        if (totalInstanceCount <= 10 || totalInstanceCount % 100 === 0) {
+          // Log only first 10 instances and every 100th instance to avoid console spam
+          console.log("[scanFileForComponents] Counting instance #" + totalInstanceCount + ":", node.name);
+        }
+      } else {
+        if (totalInstanceCount <= 10) {
+          console.log("[scanFileForComponents] Skipping nested instance:", node.name, "(parent type:", parentType, ", inside instance:", isInsideInstance + ")");
+        }
+      }
+    }
+    
+    // Track frames/groups that might be detached instances
+    // These are top-level frames/groups that aren't inside other instances or components
+    if ((node.type === "FRAME" || node.type === "GROUP") && !isInsideInstance && 
+        parentType !== "COMPONENT" && parentType !== "COMPONENT_SET") {
+      // Store for later analysis
+      suspiciousFrames.push({
+        node: node,
+        name: node.name
+      });
+    }
+    
+    // Recursively traverse children, passing current node type and instance status
+    if ("children" in node && Array.isArray(node.children)) {
+      // If current node is an instance, mark children as being inside an instance
+      // Also check if this is a frame/group that matches a component name (likely detached)
+      var isLikelyDetached = (node.type === "FRAME" || node.type === "GROUP") && 
+                             componentNameMap[node.name] !== undefined;
+      var childIsInsideInstance = isInsideInstance || node.type === "INSTANCE" || isLikelyDetached;
+      
+      for (var i = 0; i < node.children.length; i++) {
+        traverseNode(node.children[i], node.type, childIsInsideInstance);
+      }
+    }
+  }
+  
+  // Traverse all pages
+  var pages = figma.root.children;
+  for (var i = 0; i < pages.length; i++) {
+    console.log("[scanFileForComponents] Scanning page:", pages[i].name);
+    traverseNode(pages[i], null, false);
+  }
+  
+  // Check for detachments
+  console.log("[scanFileForComponents] Checking for detachments...");
+  console.log("[scanFileForComponents] Component names tracked:", Object.keys(componentNameMap).length);
+  console.log("[scanFileForComponents] Component usage tracked:", Object.keys(componentUsageMap).length);
+  console.log("[scanFileForComponents] Suspicious frames to check:", suspiciousFrames.length);
+  
+  // 1. Check connected instances that lost their mainComponent reference
+  for (var i = 0; i < instancesData.length; i++) {
+    var instance = instancesData[i].node;
+    var mainComp = instancesData[i].mainComponent;
+    
+    if (!mainComp) {
+      console.log("[scanFileForComponents] Detachment found (instance with no main component):", instance.name);
+      detachmentCount++;
+    } else {
+      if (i < 5) {
+        console.log("[scanFileForComponents] Instance connected:", instance.name, "→", mainComp.name);
+      }
+    }
+  }
+  
+  // 2. Check frames/groups that have names matching component names
+  // These are likely detached instances
+  for (var i = 0; i < suspiciousFrames.length; i++) {
+    var frame = suspiciousFrames[i];
+    var frameName = frame.name;
+    var possibleMatch = false;
+    
+    // Check if this frame's name matches any known component name (local components)
+    if (componentNameMap[frameName]) {
+      possibleMatch = true;
+    }
+    
+    // Also check if this frame's name matches any component name used by instances (remote or local)
+    if (componentUsageMap[frameName]) {
+      possibleMatch = true;
+    }
+    
+    if (possibleMatch) {
+      console.log("[scanFileForComponents] Potential detached instance found:", frameName, "(matches component name)");
+      detachmentCount++;
+      detachedNodes.push(frame.node);
+    }
+  }
+  
+  console.log("[scanFileForComponents] Total detachments found:", detachmentCount);
+  
+  var trackedComponentIds = Object.keys(trackedComponents);
+  var componentsWithoutDocs = 0;
+  var componentsWithoutCode = 0;
+  for (var compIdx = 0; compIdx < trackedComponentIds.length; compIdx++) {
+    var compInfo = trackedComponents[trackedComponentIds[compIdx]];
+    if (compInfo && !compInfo.hasDocs) {
+      componentsWithoutDocs++;
+    }
+    if (compInfo && !compInfo.hasCode) {
+      componentsWithoutCode++;
+    }
+  }
+  
+  console.log("[scanFileForComponents] Components tracked:", trackedComponentIds.length);
+  console.log("[scanFileForComponents] Components without documentation:", componentsWithoutDocs);
+  console.log("[scanFileForComponents] Components without code connect:", componentsWithoutCode);
+  
+  // Total unique components = component sets + standalone components
+  var componentCount = Object.keys(componentSetIds).length + Object.keys(standaloneComponentIds).length;
+  
+  console.log("[scanFileForComponents] Scan complete.");
+  console.log("[scanFileForComponents] Component Sets:", Object.keys(componentSetIds).length);
+  console.log("[scanFileForComponents] Standalone Components:", Object.keys(standaloneComponentIds).length);
+  console.log("[scanFileForComponents] Total Unique Components:", componentCount);
+  console.log("[scanFileForComponents] Total Instances:", totalInstanceCount);
+  console.log("[scanFileForComponents] Detachments:", detachmentCount);
+  
+  // Send initial results to UI (without out of date count yet)
+  figma.ui.postMessage({
+    type: "overview-stats",
+    componentCount: componentCount,
+    totalInstanceCount: totalInstanceCount,
+    detachmentCount: detachmentCount,
+    componentsWithoutDocs: componentsWithoutDocs,
+    componentsWithoutCode: componentsWithoutCode,
+    outOfDateCount: null
+  });
+  
+  // Check for out of date components (async operation)
+  console.log("[scanFileForComponents] Starting async check for out of date components...");
+  checkForOutOfDateComponents(
+    instancesData,
+    componentCount,
+    totalInstanceCount,
+    detachmentCount,
+    componentsWithoutDocs,
+    componentsWithoutCode
+  );
+}
+
+async function checkForOutOfDateComponents(
+  instancesData,
+  componentCount,
+  totalInstanceCount,
+  detachmentCount,
+  componentsWithoutDocs,
+  componentsWithoutCode
+) {
+  console.log("[checkForOutOfDateComponents] Starting async check...");
+  var uniqueComponents = {};
+  var outOfDateCount = 0;
+  
+  try {
+    // First, collect unique library components to avoid checking duplicates
+    for (var i = 0; i < instancesData.length; i++) {
+      var mainComp = instancesData[i].mainComponent;
+      
+      if (mainComp && mainComp.remote === true && mainComp.key) {
+        if (!uniqueComponents[mainComp.key]) {
+          uniqueComponents[mainComp.key] = {
+            component: mainComp,
+            name: mainComp.name
+          };
+        }
+      }
+    }
+    
+    var componentKeys = Object.keys(uniqueComponents);
+    console.log("[checkForOutOfDateComponents] Checking", componentKeys.length, "unique library components for updates...");
+    
+    // Check each unique component for updates
+    for (var i = 0; i < componentKeys.length; i++) {
+      var key = componentKeys[i];
+      var mainComp = uniqueComponents[key].component;
+      
+      try {
+        // Try to import the latest version of the component
+        var latestComponent = await figma.importComponentByKeyAsync(key);
+        
+        // If we can import it and it's different from the current main component,
+        // it means there's an update available
+        if (latestComponent && latestComponent.id !== mainComp.id) {
+          outOfDateCount++;
+          if (outOfDateCount <= 5) {
+            console.log("[checkForOutOfDateComponents] Update available for:", mainComp.name);
+          }
+        }
+      } catch (e) {
+        // If import fails, the component might not be accessible or doesn't have updates
+        // This is normal, so we just skip it
+      }
+    }
+    
+    // Also check for style updates
+    var localStyles = figma.getLocalPaintStyles().concat(
+      figma.getLocalTextStyles(),
+      figma.getLocalEffectStyles(),
+      figma.getLocalGridStyles()
+    );
+    
+    for (var i = 0; i < localStyles.length; i++) {
+      var style = localStyles[i];
+      if (style.remote === true && style.key) {
+        try {
+          // Check if we can get a newer version
+          var latestStyle = await figma.importStyleByKeyAsync(style.key);
+          if (latestStyle && latestStyle.id !== style.id) {
+            outOfDateCount++;
+            if (outOfDateCount <= 10) {
+              console.log("[checkForOutOfDateComponents] Style update available:", style.name);
+            }
+          }
+        } catch (e) {
+          // Style might not be accessible or doesn't have updates
+        }
+      }
+    }
+    
+    console.log("[checkForOutOfDateComponents] Check complete. Out of date components:", outOfDateCount);
+  } catch (e) {
+    console.log("[checkForOutOfDateComponents] Error during check:", e);
+    outOfDateCount = 0;
+  }
+  
+  // Send results to UI
+  figma.ui.postMessage({
+    type: "overview-stats",
+    componentCount: componentCount,
+    totalInstanceCount: totalInstanceCount,
+    detachmentCount: detachmentCount,
+    componentsWithoutDocs: componentsWithoutDocs,
+    componentsWithoutCode: componentsWithoutCode,
+    outOfDateCount: outOfDateCount
+  });
+}
+
 // Check initial selection when plugin loads
 console.log("[PLUGIN INIT] Checking initial selection");
 setTimeout(function() {
   console.log("[PLUGIN INIT] Initial selection check timeout fired");
   resolveDocumentationFromSelection();
+  // Also scan for components
+  scanFileForComponents();
 }, 100);
